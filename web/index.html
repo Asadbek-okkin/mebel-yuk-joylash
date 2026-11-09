@@ -21,6 +21,12 @@
 </header>
 <main class="joy">
   <aside class="panel">
+    <section class="blok katalog" data-test="katalog" hidden>
+      <h2>Katalog <small data-test="k-soni"></small></h2>
+      <input type="search" class="k-qidir" data-test="k-qidir" placeholder="Mahsulot nomi bo'yicha qidirish" aria-label="Qidirish">
+      <div class="turkumlar" data-test="k-turkum" role="group" aria-label="Turkum"></div>
+      <div class="kartalar" data-test="k-kartalar"></div>
+    </section>
     <section class="blok">
       <h2>Buyurtmalar</h2>
       <div class="qator">
@@ -112,6 +118,17 @@
     <div class="popup" data-test="popup" hidden></div>
   </section>
 </main>
+<div class="korish-fon" data-test="korish" hidden>
+  <div class="korish" role="dialog" aria-modal="true" aria-labelledby="korish-nom">
+    <div class="korish-bosh">
+      <div><h3 id="korish-nom" data-test="korish-nom"></h3><div class="korish-meta" data-test="korish-meta"></div></div>
+      <button class="yop" data-test="korish-yop" type="button" aria-label="Yopish">×</button>
+    </div>
+    <div class="korish-3d" data-test="korish-3d"></div>
+    <ul class="korish-quti" data-test="korish-quti"></ul>
+    <div class="qator"><button class="tugma asosiy" data-test="korish-qosh" type="button">+ Mashinaga qo'shish</button></div>
+  </div>
+</div>
 <div class="varaqa-fon" data-test="varaqa" hidden>
   <div class="varaqa">
     <div class="varaqa-tugmalar">

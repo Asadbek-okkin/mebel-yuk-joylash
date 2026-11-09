@@ -1,0 +1,54 @@
+{
+ "versiya": 1,
+ "mahsulotlar": [
+  {
+   "fayl": "krovat-krovat-03.yuk",
+   "nomi": "Кроват 03",
+   "turkum": "Krovat",
+   "quti": 4,
+   "kg": 119.5,
+   "model": true
+  },
+  {
+   "fayl": "prixojka-01-marsel.yuk",
+   "nomi": "01 Марсел",
+   "turkum": "Prixojka",
+   "quti": 3,
+   "kg": 51.2,
+   "model": true
+  },
+  {
+   "fayl": "prixojka-02-pr-maks.yuk",
+   "nomi": "02 Пр Макс",
+   "turkum": "Prixojka",
+   "quti": 3,
+   "kg": 55.4,
+   "model": true
+  },
+  {
+   "fayl": "shkaf-01-shkaf-dilafruz.yuk",
+   "nomi": "01 Шкаф Дилафруз",
+   "turkum": "Shkaf",
+   "quti": 4,
+   "kg": 148.8,
+   "model": true
+  },
+  {
+   "fayl": "shkaf-02-shkaf-gola.yuk",
+   "nomi": "02 Шкаф Гола",
+   "turkum": "Shkaf",
+   "quti": 4,
+   "kg": 141.7,
+   "model": true
+  },
+  {
+   "fayl": "spalniy-sp9999-shkaf-burbon.yuk",
+   "nomi": "SP9999 Шкаф Бурбон",
+   "turkum": "Spalniy",
+   "quti": 4,
+   "kg": 181.9,
+   "model": true
+  }
+ ],
+ "yangilangan": "2026-11-09 08:29"
+}

@@ -3,42 +3,54 @@ UPAKOVKA - Bazis skripti
 
 Nima qiladi
 -----------
-Ochiq modeldagi mebelni upakovkalarga bo'ladi va har biriga 4/1, 4/2, 4/3 ... nomer beradi
-(4 - jami upakovkalar soni). Har upakovkaning o'lchami va og'irligi hisoblanadi.
+Ochiq modelni upakovkalarga bo'ladi, har biriga 4/1, 4/2 ... nomer beradi (4 - jami upakovkalar soni),
+o'lchami va og'irligini hisoblaydi, model yoniga chizadi va .yuk fayl yozadi.
 
-  - Korpus detallari kattadan kichikka taxlanadi, bitta quti <= 40 kg.
-  - Fasadlar (Фасад, Дверь, Лицевая ... nomli yoki МДФ) alohida qutilarda.
-  - Furnitura - bitta kichik quti (40x30 sm).
+1) Modelda "N/i" bloklari bo'lsa (masalan 4/1, 4/2, 4/3, 4/4 - standart modellarimizdagi kabi)
+   - aynan shu bloklar upakovka bo'ladi, nomeri o'zgarmaydi;
+   - bloklardan tashqarida qolgan detallar (ручкалар va h.k.) turiga mos blokka qo'shiladi.
 
-Natija:
-  1) Model yonida (o'ngda) "UPAKOVKA" bloki: ichida 4/1, 4/2 ... bloklari, har birida
-     detallar taxi, karton chizig'i va yorliq (nomer, kg, o'lcham). Asl model o'zgarmaydi.
-     Skript qayta ishga tushirilsa eski UPAKOVKA bloki almashtiriladi.
-  2) Model fayli yonida "<model nomi>.yuk" fayli. Model saqlanmagan bo'lsa -
-     Hujjatlar\Upakovka\ papkasida.
+2) Bloklar bo'lmasa - standart modellar qoidasi bilan o'zi bo'ladi (shkaf, spalniy, prixojka):
+     1 - fasadlar (eshik, fasad, ko'zgu - fasad bloki ichidagilar ham)
+     2 - tik uzun detallar (bokavina, stoyka, shit)
+     3 - gorizontal va mayda detallar (dno, krisha, polka, planka, plintus) + furnitura og'irligi
+     4 - orqa devor (ХДФ / ДВП)
+   Guruh 50 kg dan og'ir bo'lsa ikkiga bo'linadi. Juda yengil guruh (yashik ХДФ) mayda detallarga qo'shiladi.
 
-.yuk faylini sotuvchiga Telegram orqali yuboring - u "Yuk joylash" sahifasida ochadi:
+Quti ichida detallar real qadoqlanadi: katta detal pastda, mayda detallar bir qatlamga yonma-yon
+(bir burchakka uyilmaydi). Quti balandligi - qatlamlar soniga qarab.
+
+Natija
+------
+  - Model o'ng tomonida "UPAKOVKA" bloki: 4/1, 4/2 ... qutilar, ichida detallar qatlam-qatlam,
+    karton chizig'i va yorliq (nomer, kg, o'lcham). Asl model o'zgarmaydi.
+  - Model fayli yonida "<model nomi>.yuk" (mahsulotning 3D shakli ham ichida).
+  - Standart model (yo'lida "Стандарт" bor) bo'lsa - .yuk katalogga ham saqlanadi:
+      YandexDisk\Базис каталог\Upakovka katalog\<turkum>\<model nomi>.yuk
+    (turkum: Shkaf / Spalniy / Prixojka / Krovat / Boshqa - model papkasidan)
+
+Sotuvchilar sahifasi
+--------------------
   https://asadbek-okkin.github.io/mebel-yuk-joylash/
+  Katalogdagi mahsulotlar u yerda rasmi bilan turadi: sotuvchi tanlaydi, sonini kiritadi,
+  mashinani tanlaydi - yuklash xaritasi, kg / tonna, yuklash varaqasi tayyor.
+
+  Katalogni saytga chiqarish: Desktop'dagi "Katalogni yangilash (Yuk joylash).bat"
+  (Upakovka katalog papkasidagi barcha .yuk saytga yuklanadi, 1-2 daqiqada yangilanadi).
 
 Ishlatish
 ---------
-Bazis -> Скрипты -> Upakovka -> Upakovka.js -> "UPAKOVKA QILISH".
+Bazis -> Скрипты -> Upakovka -> Upakovka -> "UPAKOVKA QILISH".
 
 Sozlamalar (skript oynasida)
 ----------------------------
-  Maks. og'irlik (kg)     - bitta qutining eng katta og'irligi (40)
-  Karton zaxirasi (mm)    - quti har tomondan detaldan shuncha katta (20)
-  Modeldan masofa (mm)    - UPAKOVKA bloki modeldan qancha o'ngda chiziladi (500)
+  Bitta upakovka maks. kg   - 50
+  Karton zaxirasi (mm)      - quti har tomondan detaldan shuncha katta (20)
+  Modeldan masofa (mm)      - UPAKOVKA bloki modeldan qancha o'ngda chiziladi (500)
+  Katalogga ham saqlash     - standart bo'lmagan modelni ham katalogga qo'shish
 
-Qo'shimcha sozlama (ixtiyoriy): skript papkasida sozlamalar.json, masalan:
-  {
-    "zichlik": [["ХДФ|ДВП", 850], ["МДФ", 750], ["Зеркал|Стекл", 2500]],
-    "zichlikDefault": 650,
-    "furnituraKg": 0.05,
-    "fasadRegex": "Фасад|Дверь|Лицев",
-    "fasadMaterialRegex": "МДФ"
-  }
-zichlik - kg/m3 (material nomidagi so'z bo'yicha), furnituraKg - bitta furnitura o'rtacha og'irligi.
+Qo'shimcha (ixtiyoriy) - skript papkasida sozlamalar.json, masalan:
+  { "zichlik": [["ХДФ|ДВП", 850], ["МДФ", 750], ["Зеркал|Стекл", 2500]], "zichlikDefault": 650,
+    "furnituraKg": 0.05, "minKg": 5, "uzunMm": 1200 }
 
-Og'irlik taxminiy: maydon x qalinlik x zichlik. Pogonaj detallar (plintus, profil)
-va yashirin detallar hisobga olinmaydi.
+Og'irlik taxminiy: maydon x qalinlik x zichlik. Pogonaj (plintus profil) va yashirin detallar hisobga olinmaydi.

@@ -101,6 +101,27 @@ try {
     await page.emulateMedia({ media: 'screen' });
     await t('varaqa-yop').click();
 
+    // katalog: mahsulot kartalari, 3D ko'rish oynasi, mashinaga qo'shish
+    await t('katalog').waitFor({ state: 'visible', timeout: 10000 });
+    const kartalar = await page.locator('[data-test="k-kartalar"] .karta').count();
+    if (kartalar < 1) fail(`${nom}: katalog bo'sh`);
+    await page.waitForFunction(() => [...document.querySelectorAll('[data-rasm]')].some((i) => i.src.startsWith('data:image')), null, { timeout: 15000 });
+    await page.locator('[data-test="k-kartalar"] [data-kor]').first().click();
+    await t('korish').waitFor({ state: 'visible' });
+    await page.waitForTimeout(800);
+    if (!(await page.locator('[data-test="korish-3d"] canvas').count())) fail(`${nom}: 3D ko'rinish chiqmadi`);
+    await page.screenshot({ path: path.join(DIR, `${nom}-korish.png`) });
+    const oldin = await page.locator('[data-test="buyurtmalar"] li').count();
+    await t('korish-qosh').click();
+    await page.waitForFunction((n) => document.querySelectorAll('[data-test="buyurtmalar"] li').length === n + 1, oldin, { timeout: 10000 });
+    if (!(await t('korish').isHidden())) fail(`${nom}: ko'rish oynasi yopilmadi`);
+    if (!(await page.locator('[data-test="k-kartalar"] .karta.tanlangan').count())) fail(`${nom}: tanlangan karta belgilanmadi`);
+    await page.locator('[data-test="k-turkum"] [data-turkum="Shkaf"]').click();
+    const shkaf = await page.locator('[data-test="k-kartalar"] .karta').count();
+    if (shkaf < 1 || shkaf >= kartalar) fail(`${nom}: turkum filtri ishlamadi (${shkaf}/${kartalar})`);
+    await t('katalog').scrollIntoViewIfNeeded();
+    await page.screenshot({ path: path.join(DIR, `${nom}-katalog.png`) });
+
     const sw = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     if (sw > 0) fail(`${nom}: gorizontal scroll ${sw}px`);
     await page.evaluate(() => window.scrollTo(0, 0));

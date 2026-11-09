@@ -5,6 +5,8 @@ import { NAMUNA } from './namuna.js';
 import { sahnaYarat } from './sahna.js';
 import { yuklashTartibi, joyMatni } from './xarita.js';
 import { varaqaHTML } from './varaqa.js';
+import { katalogOqi, filtrla } from './katalog.js';
+import { mahsulotRasm, mahsulotKorinish } from './mahsulot3d.js';
 
 const $ = (t) => document.querySelector(`[data-test="${t}"]`);
 const tonna = (kg) => (kg / 1000).toFixed(2).replace(/\.?0+$/, '') + ' t';
@@ -37,12 +39,13 @@ function buyurtmalarRoyxati() {
     <li>
       <input type="radio" name="tanlangan" value="${i}" ${i === holat.tanlangan ? 'checked' : ''} aria-label="Nechta sig'adi uchun tanlash">
       <span class="nuqta" style="background:${b.rang}"></span>
-      <span class="nom" title="${esc(b.yuk.buyurtma)}">${esc(b.yuk.buyurtma)}
+      <span class="nom" title="${esc(b.yuk.buyurtma)}">${b.yuk.model ? `<img class="b-rasm" alt="" src="${rasm(b.yuk)}">` : ''}${esc(b.yuk.buyurtma)}
         <span class="meta">${b.yuk.upakovkalar.length} quti · ${b.yuk.jamiKg} kg</span></span>
       <input type="number" min="1" max="99" value="${b.soni}" data-i="${i}" aria-label="Soni">
       <button class="ochir" type="button" data-ochir="${i}" aria-label="O'chirish">×</button>
     </li>`).join('');
   $('bosh').hidden = holat.royxat.length > 0;
+  if (kat.mahsulotlar.length) katChiz();   // katalogdagi "×N" belgilari yangilansin
 }
 
 function qayta() {
@@ -246,6 +249,80 @@ $('varaqa-ochish').addEventListener('click', () => {
 });
 $('varaqa-yop').addEventListener('click', () => { $('varaqa').hidden = true; document.body.classList.remove('varaqa-ochiq'); });
 $('chop').addEventListener('click', () => window.print());
+
+// ---- mahsulotlar katalogi (web/katalog/index.json): tanlab mashinaga qo'shish ----
+const kat = { mahsulotlar: [], turkum: '', qidiruv: '', yuklar: new Map(), korinish: null, ochiq: null };
+const rasm = (yuk) => (yuk.model ? mahsulotRasm(yuk.buyurtma + '|' + yuk.jamiKg, yuk.model) : '');
+
+async function katYuk(fayl) {
+  if (!kat.yuklar.has(fayl)) {
+    kat.yuklar.set(fayl, fetch('katalog/' + fayl).then((r) => { if (!r.ok) throw new Error(r.status); return r.text(); }).then(oqiYuk));
+  }
+  return kat.yuklar.get(fayl);
+}
+function katSoni(m) {
+  const b = holat.royxat.find((x) => x.yuk.buyurtma === m.nomi);
+  return b ? b.soni : 0;
+}
+function katChiz() {
+  const tur = $('k-turkum'), turlar = [...new Set(kat.mahsulotlar.map((m) => m.turkum))].sort();
+  tur.innerHTML = ['', ...turlar].map((t) => `<button class="chip" type="button" data-turkum="${esc(t)}" aria-pressed="${kat.turkum === t}">${t ? esc(t) : 'Hammasi'}</button>`).join('');
+  const list = filtrla(kat.mahsulotlar, { turkum: kat.turkum, qidiruv: kat.qidiruv });
+  $('k-kartalar').innerHTML = list.map((m) => {
+    const n = katSoni(m);
+    return `<div class="karta${n ? ' tanlangan' : ''}" data-fayl="${esc(m.fayl)}">
+      <button class="k-rasm" type="button" data-kor="${esc(m.fayl)}" aria-label="${esc(m.nomi)} - ko'rish"><img alt="" data-rasm="${esc(m.fayl)}"></button>
+      <div class="k-nom" title="${esc(m.nomi)}">${esc(m.nomi)}</div>
+      <div class="k-meta">${m.quti} quti · ${m.kg} kg</div>
+      <div class="k-amal">${n ? `<span class="k-soni">×${n}</span>` : ''}<button class="tugma kichik asosiy" type="button" data-qosh="${esc(m.fayl)}">+ Qo'shish</button></div>
+    </div>`;
+  }).join('') || '<p class="bosh-holat">Topilmadi.</p>';
+  // rasmlar: fayl yuklangach chiziladi (bitta umumiy WebGL - navbat bilan)
+  list.forEach((m) => katYuk(m.fayl).then((y) => {
+    const img = document.querySelector(`[data-rasm="${CSS.escape(m.fayl)}"]`);
+    if (img && y.model) img.src = rasm(y);
+  }).catch(() => {}));
+}
+async function katQosh(fayl) {
+  try {
+    const y = await katYuk(fayl);
+    holat.royxat = buyurtmaQosh(holat.royxat, structuredClone(y));
+    $('xato').hidden = true;
+    qayta(); katChiz();
+  } catch (e) { $('xato').hidden = false; $('xato').textContent = 'Katalogdan yuklab bo\'lmadi: ' + e.message; }
+}
+async function katKorsat(fayl) {
+  const m = kat.mahsulotlar.find((x) => x.fayl === fayl);
+  const y = await katYuk(fayl);
+  kat.ochiq = fayl;
+  $('korish-nom').textContent = m.nomi;
+  $('korish-meta').textContent = `${m.turkum} · ${y.upakovkalar.length} quti · ${y.jamiKg} kg`;
+  $('korish-quti').innerHTML = y.upakovkalar.map((u) => `<li><b>${esc(u.nomer)}</b> ${esc(u.turi === 'fasad' ? 'fasad' : u.guruh === 'orqa' ? 'orqa devor' : 'korpus')} · ${u.L}×${u.W}×${u.H} mm · ${u.kg} kg</li>`).join('');
+  $('korish').hidden = false;
+  if (kat.korinish) kat.korinish.yop();
+  kat.korinish = y.model ? mahsulotKorinish($('korish-3d'), y.model) : null;
+}
+function katYop() {
+  $('korish').hidden = true;
+  if (kat.korinish) { kat.korinish.yop(); kat.korinish = null; }
+}
+$('k-turkum').addEventListener('click', (e) => { const b = e.target.closest('[data-turkum]'); if (!b) return; kat.turkum = b.dataset.turkum; katChiz(); });
+$('k-qidir').addEventListener('input', (e) => { kat.qidiruv = e.target.value; katChiz(); });
+$('k-kartalar').addEventListener('click', (e) => {
+  const q = e.target.closest('[data-qosh]'), k = e.target.closest('[data-kor]');
+  if (q) katQosh(q.dataset.qosh); else if (k) katKorsat(k.dataset.kor);
+});
+$('korish-yop').addEventListener('click', katYop);
+$('korish').addEventListener('click', (e) => { if (e.target === $('korish')) katYop(); });
+$('korish-qosh').addEventListener('click', () => { const f = kat.ochiq; katYop(); if (f) katQosh(f); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('korish').hidden) katYop(); });
+fetch('katalog/index.json').then((r) => (r.ok ? r.text() : Promise.reject(r.status))).then((t) => {
+  kat.mahsulotlar = katalogOqi(t).mahsulotlar;
+  if (!kat.mahsulotlar.length) return;
+  $('k-soni').textContent = `(${kat.mahsulotlar.length})`;
+  $('katalog').hidden = false;
+  katChiz();
+}).catch(() => {});
 
 sahna.onTanlash((t) => {
   const pop = $('popup');
