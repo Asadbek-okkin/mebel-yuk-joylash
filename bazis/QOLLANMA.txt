@@ -1,0 +1,44 @@
+UPAKOVKA - Bazis skripti
+========================
+
+Nima qiladi
+-----------
+Ochiq modeldagi mebelni upakovkalarga bo'ladi va har biriga 4/1, 4/2, 4/3 ... nomer beradi
+(4 - jami upakovkalar soni). Har upakovkaning o'lchami va og'irligi hisoblanadi.
+
+  - Korpus detallari kattadan kichikka taxlanadi, bitta quti <= 40 kg.
+  - Fasadlar (Фасад, Дверь, Лицевая ... nomli yoki МДФ) alohida qutilarda.
+  - Furnitura - bitta kichik quti (40x30 sm).
+
+Natija:
+  1) Model yonida (o'ngda) "UPAKOVKA" bloki: ichida 4/1, 4/2 ... bloklari, har birida
+     detallar taxi, karton chizig'i va yorliq (nomer, kg, o'lcham). Asl model o'zgarmaydi.
+     Skript qayta ishga tushirilsa eski UPAKOVKA bloki almashtiriladi.
+  2) Model fayli yonida "<model nomi>.yuk" fayli. Model saqlanmagan bo'lsa -
+     Hujjatlar\Upakovka\ papkasida.
+
+.yuk faylini sotuvchiga Telegram orqali yuboring - u "Yuk joylash" sahifasida ochadi:
+  https://asadbek-okkin.github.io/mebel-yuk-joylash/
+
+Ishlatish
+---------
+Bazis -> Скрипты -> Upakovka -> Upakovka.js -> "UPAKOVKA QILISH".
+
+Sozlamalar (skript oynasida)
+----------------------------
+  Maks. og'irlik (kg)     - bitta qutining eng katta og'irligi (40)
+  Karton zaxirasi (mm)    - quti har tomondan detaldan shuncha katta (20)
+  Modeldan masofa (mm)    - UPAKOVKA bloki modeldan qancha o'ngda chiziladi (500)
+
+Qo'shimcha sozlama (ixtiyoriy): skript papkasida sozlamalar.json, masalan:
+  {
+    "zichlik": [["ХДФ|ДВП", 850], ["МДФ", 750], ["Зеркал|Стекл", 2500]],
+    "zichlikDefault": 650,
+    "furnituraKg": 0.05,
+    "fasadRegex": "Фасад|Дверь|Лицев",
+    "fasadMaterialRegex": "МДФ"
+  }
+zichlik - kg/m3 (material nomidagi so'z bo'yicha), furnituraKg - bitta furnitura o'rtacha og'irligi.
+
+Og'irlik taxminiy: maydon x qalinlik x zichlik. Pogonaj detallar (plintus, profil)
+va yashirin detallar hisobga olinmaydi.

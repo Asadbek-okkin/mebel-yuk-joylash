@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "test": "node --test bazis/test/*.test.cjs web/test/*.test.js",
-    "build": "node bazis/build.js"
+    "build": "node bazis/build.js",
+    "test:bazis": "node bazis/build.js && node bazis/test/mock-bazis.cjs"
   }
 }
