@@ -2,6 +2,8 @@
 // Kuzov o'qlari: L (kabinadan eshikka) -> X, W -> Z, H -> Y (metrda). Eshik x = L tomonda.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { mashinaModeli } from './mashina3d.js';
+import { mashinaProfil } from './mashinalar.js';
 
 const M = 1 / 1000;
 const silliq = (t) => t * t * (3 - 2 * t);
@@ -70,7 +72,8 @@ export function sahnaYarat(el) {
 
   const guruh = new THREE.Group();
   scene.add(guruh);
-  let qutilar = [], K = null, tanlashCb = null, belgilangan = null, kuzatish = false, nishon = null;
+  let qutilar = [], K = null, P = null, mashina = null, mashinaKorinsin = true;
+  let tanlashCb = null, belgilangan = null, kuzatish = false, nishon = null;
 
   function olcham() {
     const w = el.clientWidth || 1, h = el.clientHeight || 1;
@@ -115,20 +118,22 @@ export function sahnaYarat(el) {
   function chiz(kuzov, tartib, ranglar) {
     tozala();
     K = kuzov;
+    P = mashinaProfil(K);
     const L = K.L * M, W = K.W * M, H = K.H * M;
-    guruh.position.set(-L / 2, 0, -W / 2);
+    // butun mashina (kabina bilan) markazda tursin
+    guruh.position.set(-L / 2 + (P.kabinaL + P.oraliq) / 2, 0, -W / 2);
     const pol = new THREE.Mesh(new THREE.BoxGeometry(L, 0.02, W), new THREE.MeshLambertMaterial({ color: 0x8d8a84 }));
     pol.position.set(L / 2, -0.01, W / 2);
     guruh.add(pol);
     const kuzovQ = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(L, H, W)), new THREE.LineBasicMaterial({ color: 0x5b6470 }));
     kuzovQ.position.set(L / 2, H / 2, W / 2);
     guruh.add(kuzovQ);
-    const devor = new THREE.Mesh(new THREE.BoxGeometry(0.04, H, W), new THREE.MeshLambertMaterial({ color: 0x3a4250, transparent: true, opacity: 0.55 }));
-    devor.position.set(-0.02, H / 2, W / 2);
-    guruh.add(devor);
-    const o = Math.max(0.6, Math.min(2.4, Math.max(L, W) * 0.14));
-    yozuv('KABINA', -0.05, H + 0.3, W / 2, o);
-    yozuv('ESHIK', L + 0.05, H + 0.3, W / 2, o);
+    mashina = mashinaModeli(P, L, W, H);
+    mashina.visible = mashinaKorinsin;
+    guruh.add(mashina);
+    const o = Math.max(0.5, Math.min(1.4, Math.max(L, W) * 0.1));
+    yozuv('KABINA', -(P.oraliq + P.kabinaL / 2), P.kabinaH - P.polH + (P.tur === 'fura' ? 0.95 : 0.45), W / 2, o);
+    yozuv('ESHIK', L + 0.6, H + 0.35, W / 2, o);
 
     const TW = tartib.length > 250 ? 160 : tartib.length > 120 ? 224 : 384;
     tartib.forEach((t) => {
@@ -162,12 +167,13 @@ export function sahnaYarat(el) {
     let faol = null;
     if (t > 0 && qutilar[joylangan]) {
       faol = qutilar[joylangan];
-      const P = faol.userData.joyi, p = faol.userData.joy;
+      const J = faol.userData.joyi, p = faol.userData.joy;
       const yarim = (p.h * M) / 2;
-      const S = new THREE.Vector3(L + 1.0 + (p.l * M) / 2, yarim, P.z);           // eshik orqasida, yerda
-      const Y1 = Math.min(H + 0.35, Math.max(P.y, yarim) + 0.3);                   // ko'tarilish balandligi
+      // ochiq eshiklar orqasida, yerda turgan joyidan boshlanadi
+      const S = new THREE.Vector3(L + 1.4 + (p.l * M) / 2, -P.polH + yarim, J.z);
+      const Y1 = Math.min(H + 0.35, Math.max(J.y, yarim) + 0.3);                   // ko'tarilish balandligi
       const a = silliq(Math.min(1, t / 0.25)), b = silliq(Math.max(0, Math.min(1, (t - 0.25) / 0.55))), c = silliq(Math.max(0, (t - 0.8) / 0.2));
-      faol.position.set(S.x + (P.x - S.x) * b, S.y + (Y1 - S.y) * a + (P.y - Y1) * c, S.z + (P.z - S.z) * b);
+      faol.position.set(S.x + (J.x - S.x) * b, S.y + (Y1 - S.y) * a + (J.y - Y1) * c, S.z + (J.z - S.z) * b);
     } else if (joylangan > 0) {
       faol = qutilar[Math.min(joylangan, qutilar.length) - 1] || null;
     }
@@ -180,12 +186,13 @@ export function sahnaYarat(el) {
 
   function korinish(nom) {
     if (!K) return;
-    const L = K.L * M, W = K.W * M, H = K.H * M;
-    const r = Math.max(L, W * 1.6, H * 1.6) * Math.max(1, 1.3 / (camera.aspect || 1));
-    const tg = new THREE.Vector3(0, H * 0.35, 0);
-    if (nom === 'yon') camera.position.set(0, H * 0.6, r * 1.05);
+    const L = K.L * M, W = K.W * M, H = K.H * M, kab = P.kabinaL + P.oraliq;
+    const r = Math.max(L + kab, W * 1.6, (H + P.polH) * 1.6) * Math.max(1, 1.3 / (camera.aspect || 1));
+    const tg = new THREE.Vector3(0, H * 0.3, 0);
+    const eshikX = L / 2 + kab / 2;   // eshikning dunyo koordinatasi (guruh siljigan)
+    if (nom === 'yon') camera.position.set(0, H * 0.55, r * 1.05);
     else if (nom === 'tepa') camera.position.set(0.001, r * 1.25, 0.001);
-    else if (nom === 'eshik') { camera.position.set(L / 2 + Math.max(W, H) * 1.6, H * 0.85, 0); tg.set(0, H * 0.4, 0); }
+    else if (nom === 'eshik') { camera.position.set(eshikX + Math.max(W, H) * 1.9, H * 0.8, 0); tg.set(eshikX - L * 0.3, H * 0.4, 0); }
     else camera.position.set(r * 0.75, r * 0.65, r * 0.95);
     controls.target.copy(tg);
     controls.update();
@@ -206,6 +213,7 @@ export function sahnaYarat(el) {
   return {
     chiz, korsat, korinish, tozala,
     kuzat(v) { kuzatish = !!v; },
+    mashinaKorinsin(v) { mashinaKorinsin = !!v; if (mashina) mashina.visible = mashinaKorinsin; },
     onTanlash(cb) { tanlashCb = cb; },
     ekranNuqta(i) {
       const m = qutilar[i];

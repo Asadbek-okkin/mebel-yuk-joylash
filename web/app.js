@@ -227,6 +227,11 @@ $('kuzat').addEventListener('click', (e) => {
   sahna.kuzat(pl.kuzat);
 });
 sahna.kuzat(true);
+$('mashina-kor').addEventListener('click', (e) => {
+  const v = e.currentTarget.getAttribute('aria-pressed') !== 'true';
+  e.currentTarget.setAttribute('aria-pressed', String(v));
+  sahna.mashinaKorinsin(v);
+});
 
 // ---- yuklash varaqasi (2D xaritalar + ro'yxat, chop etish) ----
 $('varaqa-ochish').addEventListener('click', () => {
