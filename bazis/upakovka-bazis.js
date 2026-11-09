@@ -262,5 +262,5 @@ function upakovka() {
 	msg += saqlandi ? '\nFayl: ' + yol + '\nShu faylni "Yuk joylash" sahifasida oching.' : '\nDIQQAT: fayl yozilmadi: ' + yol;
 	if (R.ogohlar.length) msg += '\n\n' + R.ogohlar.join('\n');
 	if (C.skip.pogonaj) msg += '\n\n' + C.skip.pogonaj + ' ta pogonaj detal (plintus, profil) hisobga olinmadi.';
-	alert(msg);
+	alert(qisqart(msg, 3000));   // juda katta modelda ham Bazis yiqilmasin (COM satr chegarasi)
 }

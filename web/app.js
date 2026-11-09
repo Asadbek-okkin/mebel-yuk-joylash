@@ -47,6 +47,8 @@ function qayta() {
   buyurtmalarRoyxati();
   mashinaRoyxati();
   $('nechta-natija').textContent = '';
+  hisobId++;                       // kutilayotgan "Nechta sig'adi" javobi endi eskirgan
+  $('nechta').disabled = false;
   $('popup').hidden = true;
   const K = mashina();
   const qutilar = qutilarniYoy(holat.royxat);
@@ -141,11 +143,27 @@ $('oz-ochir').addEventListener('click', () => {
 $('nechta').addEventListener('click', () => {
   const out = $('nechta-natija');
   if (!holat.royxat.length) { out.textContent = 'Avval buyurtma qo\'shing.'; return; }
-  const b = holat.royxat[holat.tanlangan];
-  const n = nechtaSigadi(holat.royxat, holat.tanlangan, mashina());
+  const b = holat.royxat[holat.tanlangan], K = mashina();
   const boshqa = holat.royxat.length > 1 ? ' (boshqa buyurtmalar bilan birga)' : '';
-  out.textContent = `${mashina().nomi}ga «${b.yuk.buyurtma}» dan ${n} ta komplekt sig'adi${boshqa}.`;
+  const yoz = (n) => { out.textContent = `${K.nomi}ga «${b.yuk.buyurtma}» dan ${n} ta komplekt sig'adi${boshqa}.`; $('nechta').disabled = false; };
+  const id = ++hisobId;
+  out.textContent = 'Hisoblanmoqda…';
+  $('nechta').disabled = true;
+  const w = hisobchi();
+  if (!w) { setTimeout(() => yoz(nechtaSigadi(holat.royxat, holat.tanlangan, K)), 20); return; }
+  w.onmessage = (e) => {
+    if (e.data.id !== hisobId) return;   // eskirgan javob
+    if (e.data.xato) { out.textContent = 'Hisoblashda xato: ' + e.data.xato; $('nechta').disabled = false; return; }
+    yoz(e.data.n);
+  };
+  w.postMessage({ id, buyurtmalar: holat.royxat.map((x) => ({ yuk: x.yuk, soni: x.soni })), idx: holat.tanlangan, kuzov: K });
 });
+let hisobId = 0, worker = null;
+function hisobchi() {
+  if (worker === false) return null;
+  try { worker = worker || new Worker(new URL('./hisob-worker.js', import.meta.url), { type: 'module' }); } catch { worker = false; return null; }
+  return worker;
+}
 $('orqaga').addEventListener('click', () => {
   const n = holat.natija.joylandi.length;
   holat.qadam = holat.qadam === null ? Math.max(0, n - 1) : Math.max(0, holat.qadam - 1);
@@ -164,10 +182,10 @@ sahna.onTanlash((p) => {
   if (!p) { pop.hidden = true; return; }
   const b = holat.royxat[p.q.buyurtma];
   pop.innerHTML = `<button class="yop" type="button" aria-label="Yopish">×</button>
-    <h3>${esc(p.q.nomer)} · ${p.q.kg} kg</h3>
-    <div>${esc(b.yuk.buyurtma)} · ${p.q.turi}</div>
-    <div>${p.q.L}×${p.q.W}×${p.q.H} mm</div>
-    ${p.q.detallar && p.q.detallar.length ? `<ul>${p.q.detallar.map((d) => `<li>${esc(d.nomi)} ${d.L}×${d.W}×${d.T}</li>`).join('')}</ul>` : ''}`;
+    <h3>${esc(p.q.nomer)} · ${esc(p.q.kg)} kg</h3>
+    <div>${esc(b.yuk.buyurtma)} · ${esc(p.q.turi)}</div>
+    <div>${esc(p.q.L)}×${esc(p.q.W)}×${esc(p.q.H)} mm</div>
+    ${p.q.detallar && p.q.detallar.length ? `<ul>${p.q.detallar.map((d) => `<li>${esc(d.nomi)} ${esc(d.L)}×${esc(d.W)}×${esc(d.T)}</li>`).join('')}</ul>` : ''}`;
   pop.hidden = false;
 });
 $('popup').addEventListener('click', (e) => { if (e.target.classList.contains('yop')) $('popup').hidden = true; });

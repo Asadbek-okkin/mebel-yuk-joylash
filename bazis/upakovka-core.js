@@ -92,6 +92,14 @@ function bolish(detallar, furnituraSoni, S) {
 	return { upakovkalar: upakovkalar, ogohlar: ogohlar };
 }
 
+// Bazis alert/COM ga juda uzun satr uzatilsa yiqiladi - xabar shu uzunlikda kesiladi
+function qisqart(s, n) {
+	s = String(s);
+	if (s.length <= n) return s;
+	const k = s.lastIndexOf('\n', n);
+	return s.substring(0, k > n / 2 ? k : n) + '\n... (xabar qisqartirildi)';
+}
+
 function yukFayl(buyurtma, sana, upakovkalar) {
 	return {
 		format: 'mebel-yuk', versiya: 1,
@@ -101,4 +109,4 @@ function yukFayl(buyurtma, sana, upakovkalar) {
 	};
 }
 
-if (typeof module !== 'undefined') module.exports = { DEFAULT: UPAK_DEFAULT, sozlama, zichlik, detalKg, fasadmi, bolish, yukFayl };
+if (typeof module !== 'undefined') module.exports = { DEFAULT: UPAK_DEFAULT, sozlama, zichlik, detalKg, fasadmi, bolish, yukFayl, qisqart };

@@ -23,19 +23,23 @@ function kesishadi(a, x, y, z, l, w, h) {
   return x < a.x + a.l - e && a.x < x + l - e && y < a.y + a.w - e && a.y < y + w - e && z < a.z + a.h - e && a.z < z + h - e;
 }
 
+let tosiq = 0;
 function yaroqli(J, K, q, x, y, z, l, w, h) {
   if (x + l > K.L + EPS || y + w > K.W + EPS || z + h > K.H + EPS) return false;
-  for (let i = 0; i < J.length; i++) if (kesishadi(J[i], x, y, z, l, w, h)) return false;
+  // oxirgi to'sgan quti birinchi tekshiriladi: ketma-ket nuqtalarni ko'pincha bitta quti to'sadi
+  if (tosiq < J.length && kesishadi(J[tosiq], x, y, z, l, w, h)) return false;
+  for (let i = 0; i < J.length; i++) if (kesishadi(J[i], x, y, z, l, w, h)) { tosiq = i; return false; }
+  const Y = J;
   // fasad qutisi boshqa (fasad bo'lmagan) qutining ostiga kiritilmaydi
-  if (fasadmi(q)) for (let i = 0; i < J.length; i++) {
-    const o = J[i];
+  if (fasadmi(q)) for (let i = 0; i < Y.length; i++) {
+    const o = Y[i];
     if (fasadmi(o.q) || Math.abs(o.z - (z + h)) > EPS) continue;
     if (Math.min(x + l, o.x + o.l) - Math.max(x, o.x) > 0 && Math.min(y + w, o.y + o.w) - Math.max(y, o.y) > 0) return false;
   }
   if (z <= EPS) return true;
   let s = 0;
-  for (let i = 0; i < J.length; i++) {
-    const o = J[i];
+  for (let i = 0; i < Y.length; i++) {
+    const o = Y[i];
     if (Math.abs(o.z + o.h - z) > EPS) continue;
     const dx = Math.min(x + l, o.x + o.l) - Math.max(x, o.x), dy = Math.min(y + w, o.y + o.w) - Math.max(y, o.y);
     if (dx <= 0 || dy <= 0) continue;
@@ -59,10 +63,17 @@ export function joyla(qutilar, K) {
   return eng;
 }
 
-function joylaTartib(royxat, K) {
+// hammasi sig'adimi (tez: birinchi sig'magan qutida to'xtaydi)
+function hammasiSigadimi(qutilar, K) {
+  for (const k of TARTIBLAR) if (joylaTartib(tartib(qutilar, k), K, true).sigmadi.length === 0) return true;
+  return false;
+}
+
+function joylaTartib(royxat, K, toxta = false) {
   const J = [], sigmadi = [];
   let P = [{ x: 0, y: 0, z: 0 }], jamiKg = 0;
   for (const q of royxat) {
+    if (toxta && sigmadi.length) break;
     const yon = [[q.L, q.W], [q.W, q.L]];
     if (!yon.some(([l, w]) => l <= K.L && w <= K.W) || q.H > K.H) { sigmadi.push({ q, sabab: 'olcham' }); continue; }
     if (jamiKg + q.kg > K.maxKg + 1e-9) { sigmadi.push({ q, sabab: 'ogirlik' }); continue; }
@@ -76,15 +87,18 @@ function joylaTartib(royxat, K) {
     if (!joy) { sigmadi.push({ q, sabab: 'joy' }); continue; }
     J.push(joy);
     jamiKg += q.kg;
-    P.push({ x: joy.x + joy.l, y: joy.y, z: joy.z }, { x: joy.x, y: joy.y + joy.w, z: joy.z }, { x: joy.x, y: joy.y, z: joy.z + joy.h });
-    // takror va qutilar ichida qolgan nuqtalar olib tashlanadi; tartib: past, old, chap
-    const seen = new Set();
-    P = P.filter((p) => {
+    // eski nuqtalar faqat yangi quti bilan tekshiriladi (oldingilari bilan allaqachon tekshirilgan),
+    // yangi nuqtalar - hamma qutilar bilan; takrorlar va kuzovdan tashqaridagilar tashlanadi; tartib: past, old, chap
+    const yangi = [joy];
+    P = P.filter((p) => !ichida(yangi, p));
+    const seen = new Set(P.map((p) => p.x + ',' + p.y + ',' + p.z));
+    for (const p of [{ x: joy.x + joy.l, y: joy.y, z: joy.z }, { x: joy.x, y: joy.y + joy.w, z: joy.z }, { x: joy.x, y: joy.y, z: joy.z + joy.h }]) {
       const k = p.x + ',' + p.y + ',' + p.z;
-      if (seen.has(k) || p.x >= K.L || p.y >= K.W || p.z >= K.H) return false;
+      if (seen.has(k) || p.x >= K.L || p.y >= K.W || p.z >= K.H || ichida(J, p)) continue;
       seen.add(k);
-      return !ichida(J, p);
-    }).sort((a, b) => a.z - b.z || a.x - b.x || a.y - b.y);
+      P.push(p);
+    }
+    P.sort((a, b) => a.z - b.z || a.x - b.x || a.y - b.y);
   }
   const V = J.reduce((s, p) => s + p.l * p.w * p.h, 0);
   return { joylandi: J, sigmadi, jamiKg: Math.round(jamiKg * 10) / 10, hajmFoiz: Math.round((100 * V) / (K.L * K.W * K.H)) };
@@ -113,10 +127,17 @@ export function nechtaSigadi(buyurtmalar, idx, K) {
   const kg1 = birlik.reduce((s, u) => s + u.kg, 0), v1 = birlik.reduce((s, u) => s + u.L * u.W * u.H, 0);
   const boshqa = qutilarniYoy(buyurtmalar.map((b, i) => (i === idx ? { ...b, soni: 0 } : b)));
   const kg0 = boshqa.reduce((s, q) => s + q.kg, 0), v0 = boshqa.reduce((s, q) => s + q.L * q.W * q.H, 0);
+  // yuqori chegara: og'irlik va hajm bo'yicha
   let hi = Math.min(500, kg1 > 0 ? Math.floor((K.maxKg - kg0) / kg1) : 500, v1 > 0 ? Math.floor((K.L * K.W * K.H - v0) / v1) : 500);
-  const sigadimi = (n) => joyla(qutilarniYoy(buyurtmalar.map((b, i) => (i === idx ? { ...b, soni: n } : b))), K).sigmadi.length === 0;
+  const sigadimi = (n) => hammasiSigadimi(qutilarniYoy(buyurtmalar.map((b, i) => (i === idx ? { ...b, soni: n } : b))), K);
   let lo = 0;
-  if (hi <= 0) return 0;
+  if (hi <= 0 || !sigadimi(1)) return 0;
+  // 1, 2, 4, 8 ... bilan chegara topiladi (kichik N tez), keyin ikkilik qidiruv.
+  // Evristik joylash monoton emas: natija ba'zan haqiqiydan kam, lekin hech qachon ko'p emas (lo - tekshirilgan N).
+  lo = 1;
+  let qadam = 2;
+  while (qadam <= hi && sigadimi(qadam)) { lo = qadam; qadam *= 2; }
+  hi = Math.min(hi, qadam - 1);
   while (lo < hi) {
     const mid = Math.ceil((lo + hi) / 2);
     if (sigadimi(mid)) lo = mid; else hi = mid - 1;

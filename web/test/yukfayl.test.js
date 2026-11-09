@@ -44,3 +44,9 @@ test('NAMUNA', () => {
   assert.deepEqual(y.upakovkalar.map((u) => u.turi), ['korpus', 'korpus', 'korpus', 'fasad', 'furnitura']);
   assert.ok(y.jamiKg > 120 && y.jamiKg < 220);
 });
+test('detallar normallashadi (XSS)', () => {
+  const y = oqiYuk(JSON.stringify({ ...YUK, upakovkalar: [{ ...YUK.upakovkalar[0], detallar: [{ nomi: 5, L: '<img src=x onerror=alert(1)>', W: '300', T: 16 }, 'x'] }] }));
+  const d = y.upakovkalar[0].detallar;
+  assert.equal(d.length, 1);
+  assert.deepEqual([d[0].nomi, d[0].L, d[0].W, d[0].T], ['5', 0, 300, 16]);
+});

@@ -14,7 +14,10 @@ export function oqiYuk(matn) {
   const son = (v) => Number(v) || 0;
   y.upakovkalar = y.upakovkalar.map((u) => ({
     nomer: String(u.nomer || ''), turi: ['korpus', 'fasad', 'furnitura'].includes(u.turi) ? u.turi : 'korpus',
-    L: son(u.L), W: son(u.W), H: son(u.H), kg: son(u.kg), detallar: Array.isArray(u.detallar) ? u.detallar : []
+    L: son(u.L), W: son(u.W), H: son(u.H), kg: son(u.kg),
+    // fayl ishonchsiz (Telegram orqali keladi): detallar ham tozalanadi
+    detallar: (Array.isArray(u.detallar) ? u.detallar : []).filter((d) => d && typeof d === 'object')
+      .map((d) => ({ nomi: String(d.nomi ?? ''), L: son(d.L), W: son(d.W), T: son(d.T), material: String(d.material ?? ''), kg: son(d.kg) }))
   })).filter((u) => u.L > 0 && u.W > 0 && u.H > 0);
   y.buyurtma = String(y.buyurtma || 'Buyurtma');
   y.jamiKg = son(y.jamiKg) || Math.round(y.upakovkalar.reduce((s, u) => s + u.kg, 0) * 10) / 10;

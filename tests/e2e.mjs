@@ -63,6 +63,7 @@ try {
 
     await t('mashina').selectOption('Fura');
     await t('nechta').click();
+    await page.waitForFunction(() => /komplekt|xato/i.test(document.querySelector('[data-test="nechta-natija"]').textContent), null, { timeout: 30000 });
     const nt = await t('nechta-natija').textContent();
     if (!/\d+ ta komplekt/.test(nt)) fail(`${nom}: nechta = ${nt}`);
 

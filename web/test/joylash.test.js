@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { joyla, nechtaSigadi, tavsiya } from '../joylash.js';
+import { joyla, nechtaSigadi, tavsiya, qutilarniYoy } from '../joylash.js';
 
 const Q = (id, L, W, H, kg, turi = 'korpus', buyurtma = 0) => ({ id, nomer: id, buyurtma, turi, L, W, H, kg });
 const K = { nomi: 'T', L: 1000, W: 1000, H: 1000, maxKg: 1000 };
@@ -114,4 +114,13 @@ test('katta yassi quti uchun boshqa tartib sinaladi (namuna Gazelga sig\'adi)', 
   const r = joyla([Q('a', 1240, 640, 104, 38.6), Q('b', 2240, 640, 72, 37.3), Q('c', 2240, 1240, 43, 18.9), Q('d', 400, 300, 100, 3), Q('f', 2240, 640, 72, 27.2, 'fasad')], G);
   assert.equal(r.sigmadi.length, 0);
   invariant(r, G);
+});
+test('nechtaSigadi 30 qutili komplekt Fura < 3 s (sahifada Worker ichida)', () => {
+  const yuk = { upakovkalar: tasodifiy(30, 11).map((q) => ({ nomer: q.id, turi: q.turi, L: q.L, W: q.W, H: q.H, kg: q.kg })) };
+  const t0 = Date.now();
+  const n = nechtaSigadi([{ yuk, soni: 1 }], 0, FURA);
+  const ms = Date.now() - t0;
+  assert.ok(n >= 1);
+  assert.equal(joyla(qutilarniYoy([{ yuk, soni: n }]), FURA).sigmadi.length, 0);
+  assert.ok(ms < 3000, 'ms: ' + ms);
 });

@@ -65,3 +65,9 @@ t.test("kasrli o'lcham (868.2 vs 868) bir qutiga tushadi", () => {
   const r = C.bolish([D('Дно', 868, 550), D('Планка', 868.4, 100), D('Фронтальная', 868.2, 60)], 0, S);
   a.equal(r.upakovkalar.length, 1);
 });
+t.test('qisqart: Bazis alert uchun uzun matn kesiladi', () => {
+  const s = C.qisqart('a\n'.repeat(5000), 3000);
+  a.ok(s.length <= 3000 + 40);
+  a.match(s, /qisqartirildi/);
+  a.equal(C.qisqart('salom', 3000), 'salom');
+});
