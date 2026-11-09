@@ -2,3 +2,4 @@ dist/
 node_modules/
 .superpowers/
 tests/*.png
+tests/*.pdf
