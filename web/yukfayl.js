@@ -1,0 +1,32 @@
+// .yuk faylini o'qish va buyurtmalar ro'yxati
+import { qutilarniYoy } from './joylash.js';
+
+export { qutilarniYoy };
+
+export const RANGLAR = ['#2f6fdf', '#2e9e5b', '#e0821f', '#8a4fd1', '#d64545', '#1aa3a3', '#b8a21c', '#d2559b'];
+
+const XATO = 'Bu fayl upakovka fayli emas (.yuk)';
+
+export function oqiYuk(matn) {
+  let y;
+  try { y = JSON.parse(String(matn).replace(/^﻿/, '')); } catch { throw new Error(XATO); }
+  if (!y || y.format !== 'mebel-yuk' || y.versiya !== 1 || !Array.isArray(y.upakovkalar)) throw new Error(XATO);
+  const son = (v) => Number(v) || 0;
+  y.upakovkalar = y.upakovkalar.map((u) => ({
+    nomer: String(u.nomer || ''), turi: ['korpus', 'fasad', 'furnitura'].includes(u.turi) ? u.turi : 'korpus',
+    L: son(u.L), W: son(u.W), H: son(u.H), kg: son(u.kg), detallar: Array.isArray(u.detallar) ? u.detallar : []
+  })).filter((u) => u.L > 0 && u.W > 0 && u.H > 0);
+  y.buyurtma = String(y.buyurtma || 'Buyurtma');
+  y.jamiKg = son(y.jamiKg) || Math.round(y.upakovkalar.reduce((s, u) => s + u.kg, 0) * 10) / 10;
+  return y;
+}
+
+// bir xil fayl qayta qo'shilsa - yangi buyurtma emas, soni oshadi
+export function buyurtmaQosh(royxat, yuk) {
+  const bir = (a) => a.buyurtma + '|' + a.sana + '|' + a.jamiKg;
+  const i = royxat.findIndex((b) => bir(b.yuk) === bir(yuk));
+  if (i >= 0) return royxat.map((b, j) => (j === i ? { ...b, soni: b.soni + 1 } : b));
+  const band = new Set(royxat.map((b) => b.rang));
+  const rang = RANGLAR.find((r) => !band.has(r)) || RANGLAR[royxat.length % RANGLAR.length];
+  return royxat.concat([{ yuk, soni: 1, rang }]);
+}
