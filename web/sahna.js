@@ -13,9 +13,10 @@ function nomerQism(nomer) {
 }
 
 // qutining bir yuzi uchun yozuvli tekstura: katta nomer, kichik - navbat raqami va nusxa
-function yozuvTekstura(rang, fasad, nomer, navbat, enMm, boyMm) {
+// W - tekstura eni: ko'p qutida kichikroq, aks holda telefon GPU xotirasi to'lib qoladi
+function yozuvTekstura(rang, fasad, nomer, navbat, enMm, boyMm, W = 384) {
   const asp = Math.max(0.12, Math.min(8, enMm / Math.max(1, boyMm)));
-  const W = 384, H = Math.max(40, Math.round(W / asp));
+  const H = Math.max(32, Math.round(W / asp));
   const c = document.createElement('canvas');
   c.width = W; c.height = H;
   const g = c.getContext('2d');
@@ -40,7 +41,12 @@ function yozuvTekstura(rang, fasad, nomer, navbat, enMm, boyMm) {
     while (f2 > 10 && g.measureText(kichik).width > W * 0.92) { f2 -= 3; g.font = `600 ${f2}px system-ui, sans-serif`; }
     g.fillText(kichik, W / 2, H * 0.8);
   } else {
-    g.fillText(asosiy + '  ·  ' + kichik, W / 2, H / 2);
+    // yupqa yuz: bitta qator, butun satr enga sig'guncha kichraytiriladi
+    const satr = asosiy + '  ·  ' + kichik;
+    let f1 = Math.min(H * 0.8, 150);
+    g.font = `800 ${f1}px system-ui, sans-serif`;
+    while (f1 > 8 && g.measureText(satr).width > W * 0.94) { f1 -= 2; g.font = `800 ${f1}px system-ui, sans-serif`; }
+    g.fillText(satr, W / 2, H / 2);
   }
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
@@ -120,15 +126,16 @@ export function sahnaYarat(el) {
     const devor = new THREE.Mesh(new THREE.BoxGeometry(0.04, H, W), new THREE.MeshLambertMaterial({ color: 0x3a4250, transparent: true, opacity: 0.55 }));
     devor.position.set(-0.02, H / 2, W / 2);
     guruh.add(devor);
-    const o = Math.max(0.5, Math.min(1.6, W * 0.45));
-    yozuv('KABINA', -0.05, H + 0.25, W / 2, o);
-    yozuv('ESHIK', L + 0.05, H + 0.25, W / 2, o);
+    const o = Math.max(0.6, Math.min(2.4, Math.max(L, W) * 0.14));
+    yozuv('KABINA', -0.05, H + 0.3, W / 2, o);
+    yozuv('ESHIK', L + 0.05, H + 0.3, W / 2, o);
 
+    const TW = tartib.length > 250 ? 160 : tartib.length > 120 ? 224 : 384;
     tartib.forEach((t) => {
       const p = t.p, rang = ranglar[p.q.buyurtma] || '#888888', fasad = p.q.turi === 'fasad';
       const oddiy = new THREE.MeshLambertMaterial({ color: new THREE.Color(rang) });
       if (p.q.turi === 'furnitura') oddiy.color.offsetHSL(0, -0.2, 0.15);
-      const yon = (en, boy) => new THREE.MeshLambertMaterial({ map: yozuvTekstura(rang, fasad, p.q.nomer, t.n, en, boy) });
+      const yon = (en, boy) => new THREE.MeshLambertMaterial({ map: yozuvTekstura(rang, fasad, p.q.nomer, t.n, en, boy, TW) });
       // BoxGeometry yuzlari: +X (eshik tomoni, u - Z bo'ylab), -X, +Y (tepa, u - X bo'ylab), -Y, +Z (yon, u - X bo'ylab), -Z
       const mats = [yon(p.w, p.h), oddiy.clone(), yon(p.l, p.w), oddiy.clone(), yon(p.l, p.h), oddiy];
       mats.forEach((m) => { m.emissive = new THREE.Color(0xff8a00); m.emissiveIntensity = 1; m.emissive.setScalar(0); });

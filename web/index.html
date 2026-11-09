@@ -75,7 +75,10 @@
       <div class="chiziq"><i data-test="hajm-chiziq"></i></div>
       <p class="tavsiya" data-test="tavsiya"></p>
       <ul class="sigmadi" data-test="sigmadi"></ul>
-      <button class="tugma" data-test="nechta" type="button">Nechta sig'adi?</button>
+      <div class="qator">
+        <button class="tugma" data-test="nechta" type="button">Nechta sig'adi?</button>
+        <button class="tugma asosiy" data-test="varaqa-ochish" type="button">Yuklash varaqasi</button>
+      </div>
       <p class="nechta" data-test="nechta-natija"></p>
     </section>
   </aside>
@@ -83,15 +86,40 @@
   <section class="sahna-joy">
     <div class="sahna" data-test="canvas"></div>
     <p class="sahna-bosh" data-test="sahna-bosh">Fayl qo'shing yoki "Namuna" tugmasini bosing.</p>
-    <div class="qadamlar">
-      <button class="tugma kichik" data-test="orqaga" type="button" aria-label="Oldingi quti">◀</button>
-      <span data-test="qadam">Hammasi</span>
-      <button class="tugma kichik" data-test="oldinga" type="button" aria-label="Keyingi quti">▶</button>
-      <button class="tugma kichik" data-test="hammasi" type="button">Hammasi</button>
+    <div class="hud" data-test="hud" hidden></div>
+    <div class="korinishlar" role="group" aria-label="Ko'rinish">
+      <button class="chip" data-korinish="3d" type="button">3D</button>
+      <button class="chip" data-korinish="eshik" type="button">Eshikdan</button>
+      <button class="chip" data-korinish="yon" type="button">Yon</button>
+      <button class="chip" data-korinish="tepa" type="button">Tepa</button>
+      <button class="chip" data-test="kuzat" type="button" aria-pressed="true">Kamera kuzatsin</button>
+    </div>
+    <div class="pleyer" data-test="pleyer">
+      <input type="range" min="0" max="0" value="0" step="1" data-test="surgich" aria-label="Yuklash bosqichi">
+      <div class="pleyer-qator">
+        <button class="tugma kichik" data-test="boshiga" type="button" aria-label="Boshiga">⏮</button>
+        <button class="tugma kichik" data-test="orqaga" type="button" aria-label="Oldingi quti">◀</button>
+        <button class="tugma asosiy oyna" data-test="oyna" type="button" aria-label="Yuklashni ko'rsatish">▶ Yuklash</button>
+        <button class="tugma kichik" data-test="oldinga" type="button" aria-label="Keyingi quti">▶</button>
+        <button class="tugma kichik" data-test="hammasi" type="button" aria-label="Hammasi">⏭</button>
+        <span class="qadam" data-test="qadam">0 / 0</span>
+        <select data-test="tezlik" aria-label="Tezlik">
+          <option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option>
+        </select>
+      </div>
     </div>
     <div class="popup" data-test="popup" hidden></div>
   </section>
 </main>
+<div class="varaqa-fon" data-test="varaqa" hidden>
+  <div class="varaqa">
+    <div class="varaqa-tugmalar">
+      <button class="tugma asosiy" data-test="chop" type="button">Chop etish / PDF</button>
+      <button class="tugma" data-test="varaqa-yop" type="button">Yopish</button>
+    </div>
+    <div data-test="varaqa-ichi"></div>
+  </div>
+</div>
 <script type="module" src="app.js"></script>
 </body>
 </html>

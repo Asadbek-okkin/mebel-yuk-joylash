@@ -3,13 +3,15 @@ import { oqiYuk, buyurtmaQosh, qutilarniYoy } from './yukfayl.js';
 import { STANDART, ozMashinalar, ozMashinaSaqla, hammaMashinalar } from './mashinalar.js';
 import { NAMUNA } from './namuna.js';
 import { sahnaYarat } from './sahna.js';
+import { yuklashTartibi, joyMatni } from './xarita.js';
+import { varaqaHTML } from './varaqa.js';
 
 const $ = (t) => document.querySelector(`[data-test="${t}"]`);
 const tonna = (kg) => (kg / 1000).toFixed(2).replace(/\.?0+$/, '') + ' t';
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const SABAB = { olcham: "mashinaga sig'maydigan o'lcham", ogirlik: 'yuk limiti', joy: 'joy qolmadi' };
 
-const holat = { royxat: [], mashina: 'Gazel', tanlangan: 0, qadam: null, natija: null };
+const holat = { royxat: [], mashina: 'Gazel', tanlangan: 0, natija: null, tartib: null };
 const sahna = sahnaYarat($('canvas'));
 window.__sahna = sahna;
 
@@ -54,9 +56,11 @@ function qayta() {
   const qutilar = qutilarniYoy(holat.royxat);
   const r = joyla(qutilar, K);
   holat.natija = r;
-  holat.qadam = null;
-  sahna.chiz(K, r, holat.royxat.map((b) => b.rang));
-  qadamKorsat();
+  holat.tartib = yuklashTartibi(r.joylandi);
+  sahna.chiz(K, holat.tartib, holat.royxat.map((b) => b.rang));
+  pl.oyna = false; pl.pos = holat.tartib.length; pl.t = 0; pl.hammasi = true;
+  $('surgich').max = String(holat.tartib.length);
+  plKorsat();
   $('sahna-bosh').hidden = qutilar.length > 0;
 
   const bor = qutilar.length > 0;
@@ -86,11 +90,47 @@ function qayta() {
   }
 }
 
-function qadamKorsat() {
-  const n = holat.natija ? holat.natija.joylandi.length : 0;
-  sahna.qadam(holat.qadam);
-  $('qadam').textContent = holat.qadam === null ? 'Hammasi' : `${holat.qadam} / ${n}`;
+// ---- yuklash pleyeri: quti eshik orqasidan ko'tarilib, joyiga suriladi ----
+const pl = { pos: 0, t: 0, oyna: false, tezlik: 1, hammasi: true, kuzat: true, oxirgi: 0 };
+const QUTI_SEK = 1.1;   // bitta qutining harakati (1× tezlikda)
+
+function plKorsat() {
+  const N = holat.tartib ? holat.tartib.length : 0;
+  const faol = sahna.korsat(pl.pos, pl.t, !(pl.hammasi && pl.pos >= N && !pl.oyna));
+  $('qadam').textContent = `${Math.min(N, pl.pos + (pl.t > 0 ? 1 : 0))} / ${N}`;
+  $('surgich').value = String(pl.pos);
+  $('oyna').textContent = pl.oyna ? '❚❚ Pauza' : '▶ Yuklash';
+  const hud = $('hud');
+  if (!N) { hud.hidden = true; return; }
+  hud.hidden = false;
+  if (!faol) {
+    hud.innerHTML = `<div class="hud-n">${N} ta quti</div><div class="hud-t">«▶ Yuklash» - qutilar navbat bilan joyiga tushadi. Qutidagi katta yozuv - upakovka nomeri, №-navbat.</div>`;
+    return;
+  }
+  const p = faol.p, b = holat.royxat[p.q.buyurtma];
+  hud.innerHTML = `<div class="hud-n">${faol.n} <small>/ ${N}</small></div>
+    <div class="hud-q"><i style="background:${b.rang}"></i><b>${esc(p.q.nomer)}</b> · ${esc(b.yuk.buyurtma)}</div>
+    <div class="hud-t">${esc(p.q.kg)} kg · ${p.q.L}×${p.q.W}×${p.q.H} mm${p.q.turi === 'fasad' ? ' · <b>FASAD - ehtiyot</b>' : ''}</div>
+    <div class="hud-j">${esc(joyMatni(faol, mashina()))}</div>`;
 }
+
+function plQadam(pos) {
+  const N = holat.tartib ? holat.tartib.length : 0;
+  pl.oyna = false; pl.t = 0; pl.hammasi = false;
+  pl.pos = Math.max(0, Math.min(N, pos));
+  plKorsat();
+}
+
+(function plLoop(vaqt) {
+  requestAnimationFrame(plLoop);
+  const dt = Math.min(0.1, (vaqt - (pl.oxirgi || vaqt)) / 1000);
+  pl.oxirgi = vaqt;
+  if (!pl.oyna || !holat.tartib) return;
+  const N = holat.tartib.length;
+  pl.t += (dt * pl.tezlik) / QUTI_SEK;
+  if (pl.t >= 1) { pl.pos++; pl.t = 0; if (pl.pos >= N) { pl.pos = N; pl.oyna = false; } }
+  plKorsat();
+})(0);
 
 // ---- hodisalar ----
 $('fayl').addEventListener('change', async (e) => {
@@ -164,25 +204,52 @@ function hisobchi() {
   try { worker = worker || new Worker(new URL('./hisob-worker.js', import.meta.url), { type: 'module' }); } catch { worker = false; return null; }
   return worker;
 }
-$('orqaga').addEventListener('click', () => {
-  const n = holat.natija.joylandi.length;
-  holat.qadam = holat.qadam === null ? Math.max(0, n - 1) : Math.max(0, holat.qadam - 1);
-  qadamKorsat();
+$('boshiga').addEventListener('click', () => plQadam(0));
+$('orqaga').addEventListener('click', () => plQadam(pl.pos - 1));
+$('oldinga').addEventListener('click', () => plQadam(pl.pos + (pl.t > 0 ? 1 : 0) + 1));
+$('hammasi').addEventListener('click', () => { plQadam(Infinity); pl.hammasi = true; plKorsat(); });
+$('surgich').addEventListener('input', (e) => plQadam(Number(e.target.value)));
+$('oyna').addEventListener('click', () => {
+  const N = holat.tartib ? holat.tartib.length : 0;
+  if (!N) return;
+  if (pl.oyna) { pl.oyna = false; plKorsat(); return; }
+  if (pl.pos >= N) pl.pos = 0;
+  pl.hammasi = false; pl.oyna = true;
 });
-$('oldinga').addEventListener('click', () => {
-  const n = holat.natija.joylandi.length;
-  if (holat.qadam === null) holat.qadam = Math.min(1, n);
-  else holat.qadam = holat.qadam + 1 >= n ? null : holat.qadam + 1;
-  qadamKorsat();
+$('tezlik').addEventListener('change', (e) => { pl.tezlik = Number(e.target.value) || 1; });
+document.querySelectorAll('[data-korinish]').forEach((b) => b.addEventListener('click', () => {
+  pl.kuzat = false; $('kuzat').setAttribute('aria-pressed', 'false'); sahna.kuzat(false);
+  sahna.korinish(b.dataset.korinish);
+}));
+$('kuzat').addEventListener('click', (e) => {
+  pl.kuzat = !pl.kuzat;
+  e.currentTarget.setAttribute('aria-pressed', String(pl.kuzat));
+  sahna.kuzat(pl.kuzat);
 });
-$('hammasi').addEventListener('click', () => { holat.qadam = null; qadamKorsat(); });
+sahna.kuzat(true);
 
-sahna.onTanlash((p) => {
+// ---- yuklash varaqasi (2D xaritalar + ro'yxat, chop etish) ----
+$('varaqa-ochish').addEventListener('click', () => {
+  if (!holat.tartib || !holat.tartib.length) return;
+  const d = new Date(), p2 = (n) => String(n).padStart(2, '0');
+  $('varaqa-ichi').innerHTML = varaqaHTML({
+    K: mashina(), tartib: holat.tartib, royxat: holat.royxat, jamiKg: holat.natija.jamiKg,
+    sana: `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`
+  });
+  $('varaqa').hidden = false;
+  document.body.classList.add('varaqa-ochiq');
+});
+$('varaqa-yop').addEventListener('click', () => { $('varaqa').hidden = true; document.body.classList.remove('varaqa-ochiq'); });
+$('chop').addEventListener('click', () => window.print());
+
+sahna.onTanlash((t) => {
   const pop = $('popup');
-  if (!p) { pop.hidden = true; return; }
+  if (!t) { pop.hidden = true; return; }
+  const p = t.p;
   const b = holat.royxat[p.q.buyurtma];
   pop.innerHTML = `<button class="yop" type="button" aria-label="Yopish">×</button>
-    <h3>${esc(p.q.nomer)} · ${esc(p.q.kg)} kg</h3>
+    <h3>${esc(p.q.nomer)} · ${esc(p.q.kg)} kg <small>№${t.n}</small></h3>
+    <div>${esc(joyMatni(t, mashina()))}</div>
     <div>${esc(b.yuk.buyurtma)} · ${esc(p.q.turi)}</div>
     <div>${esc(p.q.L)}×${esc(p.q.W)}×${esc(p.q.H)} mm</div>
     ${p.q.detallar && p.q.detallar.length ? `<ul>${p.q.detallar.map((d) => `<li>${esc(d.nomi)} ${esc(d.L)}×${esc(d.W)}×${esc(d.T)}</li>`).join('')}</ul>` : ''}`;

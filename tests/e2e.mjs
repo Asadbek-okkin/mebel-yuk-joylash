@@ -67,15 +67,39 @@ try {
     const nt = await t('nechta-natija').textContent();
     if (!/\d+ ta komplekt/.test(nt)) fail(`${nom}: nechta = ${nt}`);
 
-    // bosqichma-bosqich: 1 ta quti, keyin qutiga bosib popup
+    // bosqichma-bosqich: boshiga, 1 ta quti, HUD; keyin qutiga bosib popup
+    await t('boshiga').click();
     await t('oldinga').click();
     if ((await t('qadam').textContent()).trim() !== '1 / 10') fail(`${nom}: qadam = ${await t('qadam').textContent()}`);
+    if (!/1\s*\/ 10/.test(await t('hud').textContent())) fail(`${nom}: HUD 1-quti ko'rsatmadi: ${await t('hud').textContent()}`);
+    if (!/qavat/.test(await t('hud').textContent())) fail(`${nom}: HUD da joy yo'q`);
+    // pleyer: yuklash animatsiyasi oldinga siljiydi
+    await t('tezlik').selectOption('4');
+    await t('oyna').click();
+    await page.waitForTimeout(1500);
+    const q2 = Number((await t('qadam').textContent()).split('/')[0]);
+    if (!(q2 >= 3)) fail(`${nom}: pleyer siljimadi: ${q2}`);
+    await t('oyna').click();   // pauza
+    await page.screenshot({ path: path.join(DIR, `${nom}-pleyer.png`) });
     await t('hammasi').click();
+    await page.locator('[data-korinish="3d"]').click();
     await t('canvas').scrollIntoViewIfNeeded();
     await page.waitForTimeout(600);
     const pt = await page.evaluate(() => window.__sahna.ekranNuqta(0));
     await page.mouse.click(pt.x, pt.y);
     if (!(await t('popup').isVisible())) fail(`${nom}: popup ko'rinmadi`);
+
+    // yuklash varaqasi
+    await t('varaqa-ochish').click();
+    if (!(await t('varaqa').isVisible())) fail(`${nom}: varaqa ochilmadi`);
+    const svg = await page.locator('[data-test="varaqa-ichi"] svg').count();
+    const qator = await page.locator('[data-test="varaqa-ichi"] tr.q').count();
+    if (svg < 1 || qator !== 10) fail(`${nom}: varaqa svg=${svg} qator=${qator}`);
+    await page.screenshot({ path: path.join(DIR, `${nom}-varaqa.png`), fullPage: false });
+    await page.emulateMedia({ media: 'print' });
+    await page.pdf?.({ path: path.join(DIR, `${nom}-varaqa.pdf`) }).catch(() => {});
+    await page.emulateMedia({ media: 'screen' });
+    await t('varaqa-yop').click();
 
     const sw = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     if (sw > 0) fail(`${nom}: gorizontal scroll ${sw}px`);

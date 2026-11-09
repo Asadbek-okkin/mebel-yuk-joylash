@@ -116,3 +116,76 @@ select { flex: 1 1 140px; }
   .panel > .natija { order: 3; margin-bottom: 24px; }
   .sahna-joy { order: 2; height: 60vh; margin: 12px 16px 0; border-radius: 10px; overflow: hidden; border: 1px solid var(--chegara); }
 }
+
+/* ---- yuklash pleyeri, HUD, ko'rinishlar ---- */
+.hud {
+  position: absolute; top: 12px; left: 12px; max-width: min(340px, calc(100% - 24px));
+  background: var(--sirt); border: 1px solid var(--chegara); border-radius: 12px; padding: 10px 14px; box-shadow: var(--soya);
+  font-variant-numeric: tabular-nums; pointer-events: none;
+}
+.hud-n { font-size: 30px; font-weight: 800; line-height: 1.05; letter-spacing: -.02em; }
+.hud-n small { font-size: 15px; font-weight: 600; color: var(--sust); }
+.hud-q { margin-top: 4px; font-size: 16px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.hud-q b { font-size: 22px; }
+.hud-q i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.hud-t { margin-top: 2px; color: var(--sust); font-size: 13px; }
+.hud-j { margin-top: 6px; font-weight: 700; font-size: 15px; color: var(--asosiy); }
+.korinishlar { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; max-width: 50%; }
+.chip {
+  min-height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--chegara); background: var(--sirt); color: var(--matn);
+  font: 600 13px system-ui, sans-serif; cursor: pointer; box-shadow: var(--soya);
+}
+.chip[aria-pressed="true"] { background: var(--asosiy); color: var(--asosiy-matn); border-color: var(--asosiy); }
+.pleyer {
+  position: absolute; left: 12px; right: 12px; bottom: 12px; margin: 0 auto; max-width: 640px;
+  background: var(--sirt); border: 1px solid var(--chegara); border-radius: 12px; padding: 8px 10px; box-shadow: var(--soya);
+}
+.pleyer input[type=range] { width: 100%; min-height: 24px; padding: 0; border: 0; background: none; accent-color: var(--asosiy); }
+.pleyer-qator { display: flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: wrap; }
+.pleyer .oyna { min-width: 118px; }
+.pleyer .qadam { min-width: 70px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pleyer select { min-height: 34px; flex: 0 0 auto; }
+.popup { top: auto; bottom: 120px; }
+
+/* ---- yuklash varaqasi ---- */
+.varaqa-fon { position: fixed; inset: 0; z-index: 50; background: rgba(10, 14, 20, .5); overflow: auto; padding: 16px; }
+.varaqa { max-width: 1000px; margin: 0 auto; background: #fff; color: #111; border-radius: 12px; padding: 16px 20px 28px; }
+.varaqa-tugmalar { display: flex; gap: 8px; justify-content: flex-end; position: sticky; top: 0; background: #fff; padding: 4px 0 8px; }
+.varaqa .tugma { background: #fff; color: #111; border-color: #ccc; }
+.varaqa .tugma.asosiy { background: #1f5fbf; color: #fff; border-color: #1f5fbf; }
+.v-bosh h2 { margin: 0 0 4px; font-size: 22px; }
+.v-buyurtmalar { list-style: none; padding: 0; margin: 8px 0; display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.v-buyurtmalar i, .v-jadval i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.v-izoh { color: #555; font-size: 13px; margin: 4px 0 0; }
+.v-qavat { margin-top: 18px; break-inside: avoid; }
+.v-qavat h3 { margin: 0 0 6px; font-size: 18px; }
+.v-qavat h3 small { color: #666; font-weight: 500; }
+.xarita { width: 100%; height: auto; display: block; font-family: system-ui, sans-serif; }
+.v-jadval { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.v-jadval th, .v-jadval td { border: 1px solid #ccc; padding: 4px 6px; text-align: left; }
+.v-jadval th { background: #f1f1f1; }
+.v-jadval tr { break-inside: avoid; }
+
+@media print {
+  @page { margin: 10mm; }
+  body.varaqa-ochiq > *:not(.varaqa-fon) { display: none !important; }
+  body.varaqa-ochiq { background: #fff; }
+  .varaqa-fon { position: static; background: none; padding: 0; overflow: visible; }
+  .varaqa { max-width: none; padding: 0; border-radius: 0; }
+  .varaqa-tugmalar { display: none; }
+}
+
+@media (max-width: 768px) {
+  .sahna-joy { height: 75vh; }
+  .hud { top: 8px; left: 8px; padding: 8px 10px; max-width: calc(100% - 16px); }
+  .hud-n { font-size: 24px; }
+  .korinishlar { top: auto; bottom: 142px; right: 8px; left: 8px; max-width: none; flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; scrollbar-width: none; }
+  .chip { flex: 0 0 auto; }
+  .chip { min-height: 32px; padding: 0 10px; }
+  .pleyer { left: 8px; right: 8px; bottom: 8px; padding: 6px 8px; }
+  .pleyer .tugma.kichik { min-width: 40px; }
+  .pleyer .oyna { min-width: 104px; }
+  .popup { bottom: 186px; }
+  .varaqa-fon { padding: 0; }
+  .varaqa { border-radius: 0; padding: 12px; }
+}
