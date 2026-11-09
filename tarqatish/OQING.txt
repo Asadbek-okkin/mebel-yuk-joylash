@@ -1,0 +1,21 @@
+﻿UPAKOVKA - Bazis-Mebelshchik skripti
+====================================
+
+O'RNATISH
+  1. Arxivni oching (o'ng tugma -> "Извлечь все" / Extract all).
+  2. ORNATISH.bat ni ikki marta bosing.
+     U Bazis skriptlar papkasini o'zi topadi va "Upakovka" papkasini o'shanga nusxalaydi.
+     (Topa olmasa - Bazis'dagi Скрипты papkasini o'zingiz tanlaysiz.)
+  3. Bazis'ni qayta oching.
+
+ISHLATISH
+  Modelni oching -> Скрипты -> Upakovka -> Upakovka -> "UPAKOVKA QILISH".
+  Natija:
+    - model yonida 4/1, 4/2 ... upakovka bloklari (o'lcham, kg yozilgan);
+    - model fayli yonida <model nomi>.yuk fayli.
+
+  .yuk faylini sotuvchiga Telegram orqali yuboring. U shu sahifada ochadi:
+    https://asadbek-okkin.github.io/mebel-yuk-joylash/
+  (mashinani tanlaydi - nechta sig'adi, necha kg / tonna, 3D joylashuv).
+
+Batafsil: Upakovka\QOLLANMA.txt
