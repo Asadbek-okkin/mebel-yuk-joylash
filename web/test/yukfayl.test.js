@@ -18,7 +18,7 @@ test('noto\'g\'ri fayllar', () => {
   assert.throws(() => oqiYuk('salom'), { message: XATO });
   assert.throws(() => oqiYuk('{"a":1}'), { message: XATO });
   assert.throws(() => oqiYuk(JSON.stringify({ ...YUK, format: 'boshqa' })), { message: XATO });
-  assert.throws(() => oqiYuk(JSON.stringify({ ...YUK, versiya: 2 })), { message: XATO });
+  assert.throws(() => oqiYuk(JSON.stringify({ ...YUK, versiya: 9 })), { message: XATO });
   assert.throws(() => oqiYuk(JSON.stringify({ ...YUK, upakovkalar: 'x' })), { message: XATO });
 });
 test('takrorFayl', () => {
@@ -49,4 +49,13 @@ test('detallar normallashadi (XSS)', () => {
   const d = y.upakovkalar[0].detallar;
   assert.equal(d.length, 1);
   assert.deepEqual([d[0].nomi, d[0].L, d[0].W, d[0].T], ['5', 0, 300, 16]);
+});
+test('versiya 2: turkum va model (3D shakl) o\'qiladi va tozalanadi', () => {
+  const v2 = { ...YUK, versiya: 2, turkum: 'Shkaf', model: { L: 2000, W: 550, H: 2100, ranglar: ['#7b5b45', 'javascript:alert(1)'], panellar: [[0, 0, 0, 16, 2100, 550, 0, 0], [16, 0, 0, 'x', 16, 530, 1, 1], 'yomon', [1, 2, 3]] } };
+  const y = oqiYuk(JSON.stringify(v2));
+  assert.equal(y.turkum, 'Shkaf');
+  assert.equal(y.model.panellar.length, 2);                 // massiv emas / qisqa qatorlar tashlanadi
+  assert.deepEqual(y.model.panellar[1].slice(0, 4), [16, 0, 0, 0]);
+  assert.deepEqual(y.model.ranglar, ['#7b5b45', '#999999']);  // rang faqat #hex
+  assert.throws(() => oqiYuk(JSON.stringify({ ...YUK, versiya: 3 })), { message: XATO });
 });

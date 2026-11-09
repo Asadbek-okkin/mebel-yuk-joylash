@@ -10,8 +10,18 @@ const XATO = 'Bu fayl upakovka fayli emas (.yuk)';
 export function oqiYuk(matn) {
   let y;
   try { y = JSON.parse(String(matn).replace(/^﻿/, '')); } catch { throw new Error(XATO); }
-  if (!y || y.format !== 'mebel-yuk' || y.versiya !== 1 || !Array.isArray(y.upakovkalar)) throw new Error(XATO);
+  if (!y || y.format !== 'mebel-yuk' || (y.versiya !== 1 && y.versiya !== 2) || !Array.isArray(y.upakovkalar)) throw new Error(XATO);
   const son = (v) => Number(v) || 0;
+  y.turkum = typeof y.turkum === 'string' ? y.turkum.slice(0, 40) : '';
+  // mahsulotning 3D shakli: [x, y, z, dx, dy, dz, rangIndeks, fasad] - faqat sonlar, rang faqat #hex
+  if (y.model && typeof y.model === 'object' && Array.isArray(y.model.panellar)) {
+    const m = y.model;
+    y.model = {
+      L: son(m.L), W: son(m.W), H: son(m.H),
+      ranglar: (Array.isArray(m.ranglar) ? m.ranglar : []).map((r) => (/^#[0-9a-f]{6}$/i.test(String(r)) ? String(r) : '#999999')),
+      panellar: m.panellar.filter((p) => Array.isArray(p) && p.length >= 6).slice(0, 3000).map((p) => [0, 1, 2, 3, 4, 5, 6, 7].map((i) => son(p[i])))
+    };
+  } else delete y.model;
   y.upakovkalar = y.upakovkalar.map((u) => ({
     nomer: String(u.nomer || ''), turi: ['korpus', 'fasad', 'furnitura'].includes(u.turi) ? u.turi : 'korpus',
     L: son(u.L), W: son(u.W), H: son(u.H), kg: son(u.kg),
