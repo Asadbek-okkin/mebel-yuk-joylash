@@ -11,13 +11,17 @@ Prop = Action.Properties;
 
 Btn = Prop.NewButton('UPAKOVKA QILISH');
 grUp = Prop.NewGroup('Upakovka');
-tbMaxKg = grUp.NewNumber('Maks. og\'irlik (kg)');
-tbMaxKg.Value = 40;
+// nomi o'zgargan: eski .prop dagi 40 kg qiymati endi yuklanmaydi (yangi default 50)
+tbMaxKg = grUp.NewNumber('Bitta upakovka maks. kg');
+tbMaxKg.Value = 50;
 tbZaxira = grUp.NewNumber('Karton zaxirasi (mm)');
 tbZaxira.Value = 20;
 grSahna = Prop.NewGroup('Natija');
 tbMasofa = grSahna.NewNumber('Modeldan masofa (mm)');
 tbMasofa.Value = 500;
+cbKatalog = grSahna.NewBool('Katalogga ham saqlash (standart modellar - avtomatik)');
+cbKatalog.Value = false;
+const KATALOG = 'C:\\YandexDisk\\Базис каталог\\Upakovka katalog\\';
 
 Action.Properties.Load(FileOptions);
 Action.OnFinish = function () { Action.Properties.Save(FileOptions); };
@@ -122,8 +126,9 @@ function isUpak(o) {
 	return false;
 }
 
+let SOZ = null;   // joriy sozlama (collect ichida fasad aniqlash uchun)
 function collect() {
-	const detallar = [], skip = { pogonaj: 0, yashirin: 0 };
+	const detallar = [], panellar = [], skip = { pogonaj: 0, yashirin: 0 };
 	const box = { x0: 1e18, y0: 1e18, z0: 1e18, x1: -1e18, y1: -1e18, z1: -1e18 };
 	Model.forEachPanel(function (p) {
 		try {
@@ -135,7 +140,26 @@ function collect() {
 			if (matW > 0) { skip.pogonaj++; return; }
 			const a = Number(p.ContourWidth) || 0, b = Number(p.ContourHeight) || 0, t = Number(p.Thickness) || 0;
 			if (!(a > 0 && b > 0 && t > 0)) return;
-			detallar.push({ nomi: firstLine(p.Name) || 'Detal', L: Math.max(a, b), W: Math.min(a, b), T: t, material: firstLine(p.MaterialName) });
+			// panelning global gabariti: tik/yotiqligi va mahsulot 3D ko'rinishi uchun
+			const pb = { x0: 1e18, y0: 1e18, z0: 1e18, x1: -1e18, y1: -1e18, z1: -1e18 };
+			addBox(pb, p);
+			const dx = pb.x1 - pb.x0, dy = pb.y1 - pb.y0, dz = pb.z1 - pb.z0;
+			const tik = pb.x1 > -1e17 ? !(dy <= dx && dy <= dz) : undefined;   // qalinlik Y bo'ylab bo'lsa - yotiq
+			// egalar: panel turgan bloklar nomi (yuqori daraja - model nomi - kirmaydi); blok: eng yaqin "N/i"
+			const egalar = []; let blok = '';
+			let o = null; try { o = p.Owner; } catch (e) { }
+			for (let d = 0; o && d < 15; d++) {
+				let n = ''; try { n = firstLine(o.Name); } catch (e) { }
+				let ust = null; try { ust = o.Owner; } catch (e) { }
+				if (n && ust) egalar.push(n);
+				if (!blok && /^\d+\s*\/\s*\d+$/.test(n)) blok = n;
+				o = ust;
+			}
+			const mat = firstLine(p.MaterialName), nomi = firstLine(p.Name) || 'Detal';
+			const det = { nomi: nomi, L: Math.max(a, b), W: Math.min(a, b), T: t, material: mat, egalar: egalar, tik: tik };
+			if (blok) det.blok = blok;
+			detallar.push(det);
+			if (pb.x1 > -1e17) panellar.push({ b: pb, mat: mat, fasad: fasadmi(det, SOZ) });
 		} catch (e) { }
 	});
 	// furnitura: Smeta Excel bilan bir xil aylanish
@@ -156,7 +180,31 @@ function collect() {
 		let cnt = 0; try { cnt = o.Count; } catch (e) { }
 		if (typeof cnt === 'number' && cnt > 0) for (let k = 0; k < cnt; k++) stack.push(o.Objects[k]);
 	}
-	return { detallar: detallar, furnituraSoni: furnituraSoni, box: box, skip: skip };
+	return { detallar: detallar, panellar: panellar, furnituraSoni: furnituraSoni, box: box, skip: skip };
+}
+
+// mahsulotning soddalashtirilgan 3D shakli: har panel - global gabarit qutisi (mm, model burchagidan), rang indeksi
+const RANG_SOZ = [
+	[/Зеркал|Стекл/i, '#bcd2e2'], [/Бел|Апелсин|White/i, '#eeeeec'], [/Сосна|Астана/i, '#e6d6b4'], [/Сатин/i, '#e4ded3'],
+	[/Ясень/i, '#d8c6a3'], [/Морское|Винтаж/i, '#7b5b45'], [/мокко|Мокко/i, '#8a6a55'], [/Венге/i, '#4b3426'],
+	[/Орех/i, '#8b5a3c'], [/Антрацит|Графит|Черн/i, '#4a4a4c'], [/Серый|Grey/i, '#9a9a9a'], [/Дуб/i, '#c19a6b'], [/ДСП 5кв|голый/i, '#c9b38f']
+];
+const RANG_ZAXIRA = ['#c8a27a', '#a8825e', '#d9c3a0', '#93705a', '#b99372'];
+function rangi(mat) {
+	for (let i = 0; i < RANG_SOZ.length; i++) if (RANG_SOZ[i][0].test(mat)) return RANG_SOZ[i][1];
+	let h = 0; for (let i = 0; i < mat.length; i++) h = (h * 31 + mat.charCodeAt(i)) >>> 0;
+	return RANG_ZAXIRA[h % RANG_ZAXIRA.length];
+}
+function modelShakli(panellar, box) {
+	if (!panellar.length || box.x1 < -1e17) return null;
+	const ranglar = [], idx = {};
+	const r = function (v) { return Math.round(v); };
+	const pan = panellar.map(function (p) {
+		const rang = rangi(p.mat);
+		if (idx[rang] === undefined) { idx[rang] = ranglar.length; ranglar.push(rang); }
+		return [r(p.b.x0 - box.x0), r(p.b.y0 - box.y0), r(p.b.z0 - box.z0), r(p.b.x1 - p.b.x0), r(p.b.y1 - p.b.y0), r(p.b.z1 - p.b.z0), idx[rang], p.fasad ? 1 : 0];
+	});
+	return { L: r(box.x1 - box.x0), H: r(box.y1 - box.y0), W: r(box.z1 - box.z0), panellar: pan, ranglar: ranglar };
 }
 
 function eskisiniOchir() {
@@ -180,11 +228,11 @@ function hp(x1, z1, x2, z2, y, t, nom, mat) {
 
 // Har quti: detallar yotqizilgan holda ustma-ust (X - uzunlik, Z - eni, Y - balandlik),
 // old va orqa tekislikda karton chizig'i, ustida yorliq.
+// detallar quti ichida qatlamlab yoyilgan: d.x, d.y - asosdagi joyi, d.z - qatlam balandligi (zaxira bilan)
 function chizQuti(u, x, Y0, Z0, z) {
-	let y = Y0 + z;
 	u.detallar.forEach(function (d) {
-		hp(x + z, Z0 + z, x + z + d.L, Z0 + z + d.W, y, d.T, d.nomi, d.material);
-		y += d.T;
+		if (!(d.T > 0) || d.x === undefined) return;   // furnitura og'irligi - chizilmaydi
+		hp(x + d.x, Z0 + d.y, x + d.x + d.dx, Z0 + d.y + d.dy, Y0 + d.z, d.T, d.nomi, d.material);
 	});
 	const kt = [];
 	rectLines(0, 0, u.L, u.H, kt);
@@ -223,10 +271,11 @@ function bugun() {
 
 function upakovka() {
 	const user = sozlamalarJson();
-	user.maxKg = Number(tbMaxKg.Value) || user.maxKg || 40;
+	user.maxKg = Number(tbMaxKg.Value) || user.maxKg || 50;
 	const zx = Number(tbZaxira.Value);
 	user.zaxiraMm = zx >= 0 ? zx : 20;
 	const S = sozlama(user);
+	SOZ = S;
 	const P = { masofa: Number(tbMasofa.Value) || 500, zaxira: S.zaxiraMm };
 
 	const C = collect();
@@ -253,13 +302,26 @@ function upakovka() {
 	}
 	if (!nom) nom = base;
 	const yol = dir + base.replace(/[\\\/:*?"<>|]/g, '_') + '.yuk';
-	const yuk = yukFayl(nom, bugun(), R.upakovkalar);
+	const turkum = turkumAniqla(fname);
+	const yuk = yukFayl(nom, bugun(), R.upakovkalar, { turkum: turkum, model: modelShakli(C.panellar, C.box) });
+	const matn = JSON.stringify(yuk);
 	let saqlandi = true;
-	try { writeUtf8(yol, JSON.stringify(yuk, null, 1)); } catch (e) { saqlandi = false; }
+	try { writeUtf8(yol, matn); } catch (e) { saqlandi = false; }
+	// sotuvchilar katalogi: standart model (yoki belgilangan bo'lsa) - YandexDisk\...\Upakovka katalog\<turkum>\
+	let katYol = '';
+	if (cbKatalog.Value || /Стандарт/i.test(fname)) {
+		try {
+			ensureDir(KATALOG); ensureDir(KATALOG + turkum + '\\');
+			katYol = KATALOG + turkum + '\\' + base.replace(/[\\\/:*?"<>|]/g, '_') + '.yuk';
+			writeUtf8(katYol, matn);
+		} catch (e) { katYol = ''; }
+	}
 
 	let msg = R.upakovkalar.length + ' ta upakovka, jami ' + yuk.jamiKg + ' kg (' + (yuk.jamiKg / 1000).toFixed(2) + ' t)\n\n';
 	R.upakovkalar.forEach(function (u) { msg += '- ' + u.nomer + ' ' + u.turi + '  ' + u.L + 'x' + u.W + 'x' + u.H + '  ' + u.kg + ' kg\n'; });
 	msg += saqlandi ? '\nFayl: ' + yol + '\nShu faylni "Yuk joylash" sahifasida oching.' : '\nDIQQAT: fayl yozilmadi: ' + yol;
+	if (katYol) msg += '\nKatalogga saqlandi (' + turkum + '): ' + katYol;
+	if (R.upakovkalar.some(function (u) { return u.guruh; }) && C.detallar.some(function (d) { return d.blok; })) msg += '\nModeldagi N/i bloklari bo\'yicha upakovka qilindi.';
 	if (R.ogohlar.length) msg += '\n\n' + R.ogohlar.join('\n');
 	if (C.skip.pogonaj) msg += '\n\n' + C.skip.pogonaj + ' ta pogonaj detal (plintus, profil) hisobga olinmadi.';
 	alert(qisqart(msg, 3000));   // juda katta modelda ham Bazis yiqilmasin (COM satr chegarasi)

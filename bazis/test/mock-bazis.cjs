@@ -15,7 +15,9 @@ function panel(Name, w, h, t, MaterialName) {
     Owner: null, GMin: { x: 0, y: 0, z: 0 }, GMax: { x: w, y: h, z: t }, ToGlobal: (v) => v
   }, 'TFurnPanel');
 }
-const P = [panel('Бок', 2000, 600, 16, 'ЛДСП Кроношпан'), panel('Фасад', 700, 400, 16, 'ЛДСП Кроношпан')];
+// "Панель" nomli fasad: fasadligi u turgan "Дверь" blokidan aniqlanishi kerak
+const top = { Name: '01 Шкаф', Owner: { Name: 'Model' } };
+const P = [panel('Бок', 2000, 600, 16, 'ЛДСП Кроношпан'), Object.assign(panel('Панель', 700, 400, 16, 'ЛДСП Кроношпан'), { Owner: { Name: 'Дверь 2 (простой)', Owner: top } })];
 const oldUpak = tag({ Name: 'UPAKOVKA', Count: 0, Objects: [] }, 'TFurnBlock');
 const objects = P.slice().concat([tag({ Name: 'Эксцентрик', Visible: true }, 'TFastener'), oldUpak]);
 const Model = { Count: objects.length, Objects: objects, forEachPanel: (cb) => P.forEach(cb) };
@@ -62,12 +64,15 @@ assert.ok(btn && btn.OnClick, 'tugma yaratilmadi');
 btn.OnClick();
 
 assert.equal(log.alerts.length, 1, 'alert: ' + log.alerts.join('|'));
-assert.match(log.alerts[0], /3 ta upakovka/);        // korpus + fasad + furnitura
+assert.match(log.alerts[0], /2 ta upakovka/);        // fasad + uzun (furnitura og'irligi oxirgisiga)
 assert.deepEqual(log.deleted, ['UPAKOVKA']);
-assert.deepEqual(log.blocks, ['UPAKOVKA', '3/1', '3/2', '3/3']);
+assert.deepEqual(log.blocks, ['UPAKOVKA', '2/1', '2/2']);
 assert.equal(log.panels.length, 2);
 assert.ok(log.contours >= 6, 'karton/yorliq konturlari: ' + log.contours);
 const yuk = JSON.parse(fs.readFileSync(path.join(TMP, 'Shkaf test.yuk'), 'utf8').replace(/^﻿/, ''));
 assert.equal(yuk.buyurtma, 'Shkaf test');
-assert.deepEqual(yuk.upakovkalar.map(u => u.turi), ['korpus', 'fasad', 'furnitura']);
+assert.deepEqual(yuk.upakovkalar.map(u => u.turi), ['fasad', 'korpus']);
+assert.equal(yuk.versiya, 2);
+assert.equal(yuk.model.panellar.length, 2);
+assert.equal(yuk.turkum, 'Shkaf');   // fayl nomi 'Shkaf test'
 console.log('MOCK OK');
