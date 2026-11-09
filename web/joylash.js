@@ -7,8 +7,14 @@ const EPS = 1;         // mm
 
 const fasadmi = (q) => q.turi === 'fasad';
 
-function tartib(qutilar) {
-  const k = (a, b) => b.kg - a.kg || b.L * b.W - a.L * a.W;
+// bir nechta tartib sinaladi (fasadlar har doim oxirida), eng ko'p sig'gani olinadi
+const TARTIBLAR = [
+  (a, b) => b.kg - a.kg || b.L * b.W - a.L * a.W,          // og'ir pastga
+  (a, b) => b.L * b.W - a.L * a.W || b.kg - a.kg,          // katta yuzali pastga
+  (a, b) => b.L * b.W * b.H - a.L * a.W * a.H || b.kg - a.kg,
+  (a, b) => b.L - a.L || b.W - a.W
+];
+function tartib(qutilar, k) {
   return qutilar.filter((q) => !fasadmi(q)).sort(k).concat(qutilar.filter(fasadmi).sort(k));
 }
 
@@ -44,9 +50,19 @@ function ichida(J, p) {
 }
 
 export function joyla(qutilar, K) {
+  let eng = null;
+  for (const k of TARTIBLAR) {
+    const r = joylaTartib(tartib(qutilar, k), K);
+    if (!eng || r.sigmadi.length < eng.sigmadi.length || (r.sigmadi.length === eng.sigmadi.length && r.jamiKg > eng.jamiKg)) eng = r;
+    if (!eng.sigmadi.length) break;
+  }
+  return eng;
+}
+
+function joylaTartib(royxat, K) {
   const J = [], sigmadi = [];
   let P = [{ x: 0, y: 0, z: 0 }], jamiKg = 0;
-  for (const q of tartib(qutilar)) {
+  for (const q of royxat) {
     const yon = [[q.L, q.W], [q.W, q.L]];
     if (!yon.some(([l, w]) => l <= K.L && w <= K.W) || q.H > K.H) { sigmadi.push({ q, sabab: 'olcham' }); continue; }
     if (jamiKg + q.kg > K.maxKg + 1e-9) { sigmadi.push({ q, sabab: 'ogirlik' }); continue; }

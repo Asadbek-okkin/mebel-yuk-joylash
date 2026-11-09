@@ -70,9 +70,9 @@ test('burish', () => {
   assert.equal(r.joylandi[0].l, 400);
 });
 test('osilib turmaydi', () => {
-  const r = joyla([Q('a', 500, 500, 500, 50), Q('keng', 1000, 1000, 100, 10)], K);
-  assert.equal(r.sigmadi[0].q.id, 'keng');
-  invariant(r, K);
+  const r = joyla([Q('a', 500, 500, 500, 50), Q('keng', 1000, 1000, 100, 10)], { ...K, H: 550 });
+  assert.equal(r.sigmadi.length, 1);
+  invariant(r, { ...K, H: 550 });
 });
 test('tasodifiy 200 quti invariantlari', () => {
   const r = joyla(tasodifiy(200), FURA);
@@ -108,4 +108,10 @@ test('200 quti Fura < 1.5 s', () => {
   const qs = tasodifiy(200, 7), t0 = Date.now();
   joyla(qs, FURA);
   assert.ok(Date.now() - t0 < 1500, 'ms: ' + (Date.now() - t0));
+});
+test('katta yassi quti uchun boshqa tartib sinaladi (namuna Gazelga sig\'adi)', () => {
+  const G = { nomi: 'Gazel', L: 3000, W: 2000, H: 1800, maxKg: 1500 };
+  const r = joyla([Q('a', 1240, 640, 104, 38.6), Q('b', 2240, 640, 72, 37.3), Q('c', 2240, 1240, 43, 18.9), Q('d', 400, 300, 100, 3), Q('f', 2240, 640, 72, 27.2, 'fasad')], G);
+  assert.equal(r.sigmadi.length, 0);
+  invariant(r, G);
 });
