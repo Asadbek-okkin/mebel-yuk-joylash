@@ -67,7 +67,8 @@ function bolish(detallar, furnituraSoni, S) {
 			let q = null;
 			for (let i = 0; i < ql.length && !q; i++) {
 				const c = ql[i];
-				if (!c.yopiq && c.kg + d.kg <= maxKg && d.L <= c.asosL && d.W <= c.asosW) q = c;
+				// 2 mm tolerans: Bazis o'lchamlari kasrli (868.2 va 868 - bir xil detal)
+				if (!c.yopiq && c.kg + d.kg <= maxKg && d.L <= c.asosL + 2 && d.W <= c.asosW + 2) q = c;
 			}
 			if (!q) { q = { turi: turi, asosL: d.L, asosW: d.W, kg: 0, detallar: [] }; ql.push(q); }
 			q.detallar.push(d); q.kg += d.kg;

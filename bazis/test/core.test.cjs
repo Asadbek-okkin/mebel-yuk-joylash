@@ -61,3 +61,7 @@ t.test('yukFayl', () => {
   a.equal(y.format, 'mebel-yuk'); a.equal(y.versiya, 1); a.equal(y.jamiKg, 12.5);
   a.equal(y.buyurtma, 'Shkaf'); a.equal(y.upakovkalar.length, 1);
 });
+t.test("kasrli o'lcham (868.2 vs 868) bir qutiga tushadi", () => {
+  const r = C.bolish([D('Дно', 868, 550), D('Планка', 868.4, 100), D('Фронтальная', 868.2, 60)], 0, S);
+  a.equal(r.upakovkalar.length, 1);
+});

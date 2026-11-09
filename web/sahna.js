@@ -91,7 +91,8 @@ export function sahnaYarat(el) {
     });
 
     // kamera: kuzovga qiya yuqoridan, orqa-yon tomondan
-    const r = Math.max(L, W * 1.6, H * 1.6);
+    // tor (telefon) ekranda kamera uzoqroq turadi, kuzov to'liq ko'rinsin
+    const r = Math.max(L, W * 1.6, H * 1.6) * Math.max(1, 1.3 / (camera.aspect || 1));
     camera.position.set(r * 0.75, r * 0.65, r * 0.95);
     controls.target.set(0, H * 0.35, 0);
     controls.update();
