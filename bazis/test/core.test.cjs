@@ -102,6 +102,29 @@ t.test('furnitura og\'irligi mayda detallar upakovkasiga qo\'shiladi', () => {
   a.equal(r.upakovkalar[0].kg, Math.round((3.38 + 3) * 10) / 10);
   a.ok(r.upakovkalar[0].detallar.some((d) => /Furnitura \(60 dona\)/.test(d.nomi)));
 });
+t.test('avtomatik: kichik fasad detallar bitta qutiga (asos kattalashadi)', () => {
+  const r = C.bolish([D('Фасад низ', 787, 493), D('Зеркало', 800, 270, 4, 'Зеркала'), D('планка фасадный', 834, 110)], 0, S);
+  a.equal(r.upakovkalar.length, 1);
+  a.equal(r.upakovkalar[0].L, 834 + 40);
+  qatlamInvariant(r.upakovkalar[0], 20);
+});
+t.test("avtomatik: 5 kg dan yengil guruh (yashik ХДФ) mayda detallar qutisiga qo'shiladi", () => {
+  const r = C.bolish([D('Полка', 768, 423), D('Полка', 768, 423), D('ХДФ Ящика', 367, 332, 3, 'ЛХДФ')], 0, S);
+  a.equal(r.upakovkalar.length, 1);
+  a.equal(r.upakovkalar[0].guruh, 'mayda');
+});
+t.test("furnitura eng yengil mayda qutiga, chegaradan oshirmaydi", () => {
+  const og = () => D('Полка', 1200, 600, 25);   // ~11.7 kg
+  const r = C.bolish([og(), og(), og(), og(), og(), D('Планка', 800, 100)], 100, S);   // furnitura 5 kg
+  a.ok(r.upakovkalar.every((u) => u.kg <= 50), r.upakovkalar.map((u) => u.kg).join(','));
+});
+t.test("furnitura hech qaysi qutiga sig'masa - alohida furnitura qutisi", () => {
+  const og = () => D('Полка', 1200, 600, 25);   // ~11.7 kg, 4 tasi 46.8 kg
+  const r = C.bolish([og(), og(), og(), og()], 200, S);   // furnitura 10 kg
+  a.equal(r.upakovkalar.length, 2);
+  a.deepEqual(r.upakovkalar.map((u) => u.turi), ['korpus', 'furnitura']);
+  a.ok(r.upakovkalar.every((u) => u.kg <= 50));
+});
 t.test('faqatFurnitura', () => {
   const r = C.bolish([], 10, S);
   a.deepEqual(r.upakovkalar.map((u) => [u.nomer, u.turi, u.H]), [['1/1', 'furnitura', 100]]);

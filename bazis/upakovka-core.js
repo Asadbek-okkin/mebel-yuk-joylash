@@ -158,15 +158,30 @@ function bolish(detallar, furnituraSoni, S) {
 				ql.push({ guruh: g, ds: [d], kg: d.kg, asosL: d.L, asosW: d.W, yopiq: true });
 				return;
 			}
+			// faqat og'irlik bo'yicha: quti asosi eng katta detalga qarab kattalashadi (qatlamla joylaydi)
 			let q = null;
 			for (let i = 0; i < ql.length && !q; i++) {
 				const c = ql[i];
-				if (!c.yopiq && c.kg + d.kg <= maxKg && d.L <= c.asosL + TOL && d.W <= c.asosW + TOL) q = c;
+				if (!c.yopiq && c.kg + d.kg <= maxKg) q = c;
 			}
-			if (!q) { q = { guruh: g, ds: [], kg: 0, asosL: d.L, asosW: d.W }; ql.push(q); }
+			if (!q) { q = { guruh: g, ds: [], kg: 0 }; ql.push(q); }
 			q.ds.push(d); q.kg += d.kg;
 		});
 		ql.forEach(function (q) { qutilar.push(q); });
+	});
+	// juda yengil guruh (masalan yashik ХДФ, bitta tik shit) alohida quti bo'lmaydi - eng yengil mayda qutiga
+	const minKg = Number(S.minKg) || 5;
+	const kgi = function (q) { return q.ds.reduce(function (s, d) { return s + d.kg; }, 0); };
+	['uzun', 'orqa'].forEach(function (g) {
+		const bular = qutilar.filter(function (q) { return !q.blok && q.guruh === g; });
+		if (!bular.length || bular.reduce(function (s, q) { return s + kgi(q); }, 0) >= minKg) return;
+		bular.forEach(function (q) {
+			const maqsad = qutilar.filter(function (m) { return !m.blok && m.guruh === 'mayda' && kgi(m) + kgi(q) <= maxKg; })
+				.sort(function (p, r) { return kgi(p) - kgi(r); })[0];
+			if (!maqsad) return;
+			Array.prototype.push.apply(maqsad.ds, q.ds);
+			qutilar.splice(qutilar.indexOf(q), 1);
+		});
 	});
 	if (bloklarRaqami.length && qutilar.length > bloklarRaqami.length)
 		ogohlar.push('Bloklardan tashqaridagi detallar uchun ' + (qutilar.length - bloklarRaqami.length) + ' ta yangi upakovka qo\'shildi - raqamlar qayta berildi.');
@@ -174,8 +189,10 @@ function bolish(detallar, furnituraSoni, S) {
 	const fs = Number(furnituraSoni) || 0;
 	if (fs > 0) {
 		const fd = { nomi: 'Furnitura (' + fs + ' dona)', L: 0, W: 0, T: 0, material: '', kg: fs * S.furnituraKg, guruh: 'mayda' };
-		const q = qutilar.filter(function (q) { return q.guruh === 'mayda'; })[0] || qutilar[qutilar.length - 1];
-		if (q) q.ds.push(fd); else qutilar.push({ guruh: 'furnitura', ds: [fd] });
+		const yengil = function (arr) { return arr.slice().sort(function (p, r) { return kgi(p) - kgi(r); })[0]; };
+		const q = yengil(qutilar.filter(function (q) { return q.guruh === 'mayda'; })) || yengil(qutilar);
+		// sig'sa - eng yengil qutiga; chegaradan oshirsa (yoki quti yo'q) - alohida furnitura qutisi
+		if (q && kgi(q) + fd.kg <= maxKg) q.ds.push(fd); else qutilar.push({ guruh: 'furnitura', ds: [fd] });
 	}
 	const N = qutilar.length;
 	const upakovkalar = qutilar.map(function (q, i) {
