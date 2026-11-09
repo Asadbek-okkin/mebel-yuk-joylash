@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "web/app.js"
+        ],
+        "createdAt": "2026-11-09T08:35:56.657Z",
+        "reason": "Claude: katalog karta <img data-rasm> src JS bilan (3D render dataURL) to'ldiriladi; CSS img:not([src]) {visibility:hidden} - e2e tasdiqlagan"
+      }
+    ]
+  }
+}
