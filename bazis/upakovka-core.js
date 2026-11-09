@@ -4,9 +4,14 @@
 // =====================================================================
 
 const UPAK_DEFAULT = {
-	maxKg: 40,
+	maxKg: 50,
 	zaxiraMm: 20,
 	furnituraKg: 0.05,
+	uzunMm: 1200,
+	gorizontalRegex: 'Дно|Криш|Крыш|Полк|Планк|Плинт|Цокол|Карона|Корона|Ящик|Яшик|Фронт|Столешн',
+	uzunRegex: 'Бок|Бак|Бокав|Стойк|Перегор|Шит|Стенк',
+	orqaRegex: 'ХДФ|ДВП|HDF',
+	nozikRegex: 'Зеркал|Стекл|Ойна|Oyna|Shisha',
 	// tartib muhim: birinchi mos kelgani olinadi
 	zichlik: [
 		['ХДФ|ДВП|HDF|ДВПО', 850],
@@ -37,59 +42,163 @@ function detalKg(d, S) {
 	return (Number(d.L) || 0) * (Number(d.W) || 0) * (Number(d.T) || 0) / 1e9 * zichlik(d.material, S);
 }
 
+// fasad: panel nomi, u turgan bloklar nomi (egalar: Дверь -> Аниматция -> Фасад) yoki МДФ material
 function fasadmi(d, S) {
-	return rx(S.fasadRegex).test(String(d.nomi || '')) || rx(S.fasadMaterialRegex).test(String(d.material || ''));
+	return rx(S.fasadRegex).test(String(d.nomi || '')) || rx(S.fasadRegex).test((d.egalar || []).join(' | ')) ||
+		rx(S.fasadMaterialRegex).test(String(d.material || ''));
+}
+
+// Standart modellar tartibi (Shkaf / Spalniy / Prixojka): 1 fasad, 2 tik uzun (bokavina, stoyka),
+// 3 gorizontal va mayda (dno, krisha, polka, planka), 4 orqa devor (ХДФ / ДВП)
+const GURUH_TARTIB = ['fasad', 'uzun', 'mayda', 'orqa'];
+function guruhi(d, S) {
+	const nom = String(d.nomi || ''), mat = String(d.material || '');
+	const L = Math.max(d.L, d.W), W = Math.min(d.L, d.W);
+	if (fasadmi(d, S) || rx(S.nozikRegex).test(mat) || rx(S.nozikRegex).test(nom)) return 'fasad';
+	if (rx(S.orqaRegex).test(mat) || (Number(d.T) > 0 && Number(d.T) <= 5)) return 'orqa';
+	if (rx(S.gorizontalRegex).test(nom)) return 'mayda';
+	if (rx(S.uzunRegex).test(nom) && L >= 1000) return 'uzun';
+	if (d.tik === true && L >= S.uzunMm && W >= 250) return 'uzun';
+	if (d.tik === undefined && L >= 1500 && W >= 250) return 'uzun';
+	return 'mayda';
 }
 
 function kg1(x) { return Math.round(x * 10) / 10; }
 
-// detallar: [{nomi, L, W, T, material}], furnituraSoni: dona
-// -> { upakovkalar: [{nomer:'N/i', turi, L, W, H, kg, detallar}], ogohlar: [] }
+// ---- quti ichida detallarni qatlamlab terish (MaxRects): mayda detallar bir qatlamga yonma-yon ----
+const TOL = 2;   // mm: Bazis o'lchamlari kasrli (868.2 va 868 - bir xil detal)
+function joyTop(free, w, h) {
+	let eng = null;
+	free.forEach(function (r) {
+		[[w, h], [h, w]].forEach(function (o) {
+			if (o[0] <= r.w + TOL && o[1] <= r.h + TOL) {
+				const s = Math.min(r.w - o[0], r.h - o[1]);
+				if (!eng || s < eng.s) eng = { s: s, x: r.x, y: r.y, w: o[0], h: o[1] };
+			}
+		});
+	});
+	return eng;
+}
+function joyBand(free, p) {
+	const yangi = [];
+	free.forEach(function (f) {
+		if (p.x >= f.x + f.w || p.x + p.w <= f.x || p.y >= f.y + f.h || p.y + p.h <= f.y) { yangi.push(f); return; }
+		if (p.x > f.x) yangi.push({ x: f.x, y: f.y, w: p.x - f.x, h: f.h });
+		if (p.x + p.w < f.x + f.w) yangi.push({ x: p.x + p.w, y: f.y, w: f.x + f.w - p.x - p.w, h: f.h });
+		if (p.y > f.y) yangi.push({ x: f.x, y: f.y, w: f.w, h: p.y - f.y });
+		if (p.y + p.h < f.y + f.h) yangi.push({ x: f.x, y: p.y + p.h, w: f.w, h: f.y + f.h - p.y - p.h });
+	});
+	return yangi.filter(function (a, i) {
+		if (a.w < 1 || a.h < 1) return false;
+		return !yangi.some(function (b, j) { return j !== i && b.x <= a.x && b.y <= a.y && b.x + b.w >= a.x + a.w && b.y + b.h >= a.y + a.h && (j < i || b.w * b.h > a.w * a.h); });
+	});
+}
+// ds: L >= W normallashgan detallar -> { L, W, H, detallar (x, y, z, dx, dy bilan) }
+function qatlamla(ds, z) {
+	const tekis = ds.filter(function (d) { return d.T > 0; }).sort(function (p, q) { return q.L * q.W - p.L * p.W; });
+	const baseL = tekis.reduce(function (m, d) { return Math.max(m, d.L); }, 0), baseW = tekis.reduce(function (m, d) { return Math.max(m, d.W); }, 0);
+	const qat = [];
+	tekis.forEach(function (d) {
+		let joy = null, k = 0;
+		for (; k < qat.length && !joy; k++) joy = joyTop(qat[k].free, d.L, d.W);
+		if (joy) k--;
+		else { qat.push({ free: [{ x: 0, y: 0, w: baseL, h: baseW }], T: 0 }); k = qat.length - 1; joy = joyTop(qat[k].free, d.L, d.W); }
+		qat[k].free = joyBand(qat[k].free, joy);
+		qat[k].T = Math.max(qat[k].T, d.T);
+		d._q = k; d._x = joy.x; d._y = joy.y; d._dx = joy.w; d._dy = joy.h;
+	});
+	const zq = []; let s = 0;
+	qat.forEach(function (q) { zq.push(s); s += q.T; });
+	const r1 = function (v) { return Math.round(v * 10) / 10; };
+	return {
+		L: Math.round(baseL + 2 * z), W: Math.round(baseW + 2 * z), H: Math.round(s + 2 * z),
+		detallar: ds.map(function (d) {
+			const o = { nomi: d.nomi, L: Math.round(d.L), W: Math.round(d.W), T: d.T, material: d.material, kg: kg1(d.kg) };
+			if (d.T > 0) { o.x = r1(z + d._x); o.y = r1(z + d._y); o.z = r1(z + zq[d._q]); o.dx = r1(d._dx); o.dy = r1(d._dy); o.qatlam = d._q + 1; }
+			return o;
+		})
+	};
+}
+
+function blokRaqam(s) { const m = /^(\d+)\s*\/\s*(\d+)$/.exec(String(s || '').trim()); return m ? Number(m[2]) : null; }
+
+// detallar: [{nomi, L, W, T, material, egalar?, tik?, blok?}], furnituraSoni: dona
+// blok - detal turgan "N/i" bloki (modelda oldindan tuzilgan upakovka). Bunday bloklar bo'lsa - aynan ular upakovka.
+// -> { upakovkalar: [{nomer:'N/i', turi, guruh, L, W, H, kg, detallar}], ogohlar: [] }
 function bolish(detallar, furnituraSoni, S) {
-	const z = Number(S.zaxiraMm) || 0, maxKg = Number(S.maxKg) || 40;
-	const ogohlar = [], qutilar = [];
-	const guruh = { korpus: [], fasad: [] };
+	const z = Number(S.zaxiraMm) || 0, maxKg = Number(S.maxKg) || 50;
+	const ogohlar = [], bloklar = {}, erkin = [];
 	(detallar || []).forEach(function (d0) {
 		const a = Number(d0.L) || 0, b = Number(d0.W) || 0;
-		const d = { nomi: String(d0.nomi || 'Detal'), L: Math.max(a, b), W: Math.min(a, b), T: Number(d0.T) || 0, material: String(d0.material || '') };
+		const d = { nomi: String(d0.nomi || 'Detal'), L: Math.max(a, b), W: Math.min(a, b), T: Number(d0.T) || 0, material: String(d0.material || ''), egalar: d0.egalar, tik: d0.tik };
 		if (!(d.L > 0 && d.W > 0 && d.T > 0)) return;
 		d.kg = detalKg(d, S);
-		guruh[fasadmi(d, S) ? 'fasad' : 'korpus'].push(d);
+		d.guruh = guruhi(d, S);
+		const bi = blokRaqam(d0.blok);
+		if (bi !== null) (bloklar[bi] = bloklar[bi] || []).push(d); else erkin.push(d);
 	});
-	['korpus', 'fasad'].forEach(function (turi) {
+	const qutilar = [];   // { guruh, ds }
+	const kop = function (ds) {   // ko'pchilik guruh
+		const n = {}; ds.forEach(function (d) { n[d.guruh] = (n[d.guruh] || 0) + d.kg; });
+		return Object.keys(n).sort(function (p, q) { return n[q] - n[p]; })[0];
+	};
+	const bloklarRaqami = Object.keys(bloklar).map(Number).sort(function (p, q) { return p - q; });
+	bloklarRaqami.forEach(function (i) { qutilar.push({ guruh: kop(bloklar[i]), ds: bloklar[i], blok: true }); });
+	// bloklardan tashqaridagi detal - shu guruhdagi blokka, bo'lmasa avtomatik upakovkaga
+	const qolgan = [];
+	erkin.forEach(function (d) {
+		const q = qutilar.filter(function (q) { return q.blok && q.guruh === d.guruh; })[0];
+		if (q) q.ds.push(d); else qolgan.push(d);
+	});
+	GURUH_TARTIB.forEach(function (g) {
 		const ql = [];
-		guruh[turi].sort(function (p, q) { return q.L * q.W - p.L * p.W; }).forEach(function (d) {
+		qolgan.filter(function (d) { return d.guruh === g; }).sort(function (p, q) { return q.L * q.W - p.L * p.W; }).forEach(function (d) {
 			if (d.kg > maxKg) {
 				ogohlar.push(d.nomi + ' ' + Math.round(d.L) + 'x' + Math.round(d.W) + ' bitta o\'zi ' + kg1(d.kg) + ' kg (> ' + maxKg + ' kg) - alohida upakovka');
-				ql.push({ turi: turi, asosL: d.L, asosW: d.W, kg: d.kg, detallar: [d], yopiq: true });
+				ql.push({ guruh: g, ds: [d], kg: d.kg, asosL: d.L, asosW: d.W, yopiq: true });
 				return;
 			}
 			let q = null;
 			for (let i = 0; i < ql.length && !q; i++) {
 				const c = ql[i];
-				// 2 mm tolerans: Bazis o'lchamlari kasrli (868.2 va 868 - bir xil detal)
-				if (!c.yopiq && c.kg + d.kg <= maxKg && d.L <= c.asosL + 2 && d.W <= c.asosW + 2) q = c;
+				if (!c.yopiq && c.kg + d.kg <= maxKg && d.L <= c.asosL + TOL && d.W <= c.asosW + TOL) q = c;
 			}
-			if (!q) { q = { turi: turi, asosL: d.L, asosW: d.W, kg: 0, detallar: [] }; ql.push(q); }
-			q.detallar.push(d); q.kg += d.kg;
+			if (!q) { q = { guruh: g, ds: [], kg: 0, asosL: d.L, asosW: d.W }; ql.push(q); }
+			q.ds.push(d); q.kg += d.kg;
 		});
-		ql.forEach(function (q) {
-			qutilar.push({
-				turi: turi,
-				L: Math.round(q.asosL + 2 * z), W: Math.round(q.asosW + 2 * z),
-				H: Math.round(q.detallar.reduce(function (s, d) { return s + d.T; }, 0) + 2 * z),
-				kg: kg1(q.kg),
-				detallar: q.detallar.map(function (d) { return { nomi: d.nomi, L: Math.round(d.L), W: Math.round(d.W), T: d.T, material: d.material, kg: kg1(d.kg) }; })
-			});
-		});
+		ql.forEach(function (q) { qutilar.push(q); });
 	});
+	if (bloklarRaqami.length && qutilar.length > bloklarRaqami.length)
+		ogohlar.push('Bloklardan tashqaridagi detallar uchun ' + (qutilar.length - bloklarRaqami.length) + ' ta yangi upakovka qo\'shildi - raqamlar qayta berildi.');
+	// furnitura og'irligi mayda detallar upakovkasiga (standart modellarda alohida quti yo'q)
 	const fs = Number(furnituraSoni) || 0;
-	if (fs > 0) qutilar.push({ turi: 'furnitura', L: 400, W: 300, H: fs <= 50 ? 100 : fs <= 150 ? 200 : 300, kg: kg1(fs * S.furnituraKg), detallar: [] });
+	if (fs > 0) {
+		const fd = { nomi: 'Furnitura (' + fs + ' dona)', L: 0, W: 0, T: 0, material: '', kg: fs * S.furnituraKg, guruh: 'mayda' };
+		const q = qutilar.filter(function (q) { return q.guruh === 'mayda'; })[0] || qutilar[qutilar.length - 1];
+		if (q) q.ds.push(fd); else qutilar.push({ guruh: 'furnitura', ds: [fd] });
+	}
 	const N = qutilar.length;
 	const upakovkalar = qutilar.map(function (q, i) {
-		return { nomer: N + '/' + (i + 1), turi: q.turi, L: q.L, W: q.W, H: q.H, kg: q.kg, detallar: q.detallar };
+		const kg = q.ds.reduce(function (s, d) { return s + d.kg; }, 0);
+		if (q.blok && kg > maxKg) ogohlar.push((i + 1) + '-upakovka ' + kg1(kg) + ' kg - ' + maxKg + ' kg dan og\'ir.');
+		const o = q.guruh === 'furnitura' ? { L: 400, W: 300, H: fs <= 50 ? 100 : fs <= 150 ? 200 : 300, detallar: q.ds.map(function (d) { return { nomi: d.nomi, L: 0, W: 0, T: 0, material: '', kg: kg1(d.kg) }; }) } : qatlamla(q.ds, z);
+		return {
+			nomer: N + '/' + (i + 1), turi: q.guruh === 'fasad' ? 'fasad' : q.guruh === 'furnitura' ? 'furnitura' : 'korpus', guruh: q.guruh,
+			L: o.L, W: o.W, H: o.H, kg: kg1(kg), detallar: o.detallar
+		};
 	});
 	return { upakovkalar: upakovkalar, ogohlar: ogohlar };
+}
+
+// model fayli yo'lidan mahsulot turkumi (katalog uchun)
+function turkumAniqla(yol) {
+	const s = String(yol || '');
+	if (/Спалн|Spaln|\\SP\s?\d/i.test(s)) return 'Spalniy';
+	if (/Прихож|Prixoj|\\PR\s/i.test(s)) return 'Prixojka';
+	if (/Кроват|Krovat|\\KR\s/i.test(s)) return 'Krovat';
+	if (/Шкаф|Shkaf|\\SH\s/i.test(s)) return 'Shkaf';
+	if (/Обувн|Obuvn/i.test(s)) return 'Obuvnitsa';
+	return 'Boshqa';
 }
 
 // Bazis alert/COM ga juda uzun satr uzatilsa yiqiladi - xabar shu uzunlikda kesiladi
@@ -100,13 +209,17 @@ function qisqart(s, n) {
 	return s.substring(0, k > n / 2 ? k : n) + '\n... (xabar qisqartirildi)';
 }
 
-function yukFayl(buyurtma, sana, upakovkalar) {
-	return {
-		format: 'mebel-yuk', versiya: 1,
+// qosh: { turkum, model } - model: mahsulotning 3D shakli (sahifada ko'rsatish uchun)
+function yukFayl(buyurtma, sana, upakovkalar, qosh) {
+	const y = {
+		format: 'mebel-yuk', versiya: 2,
 		buyurtma: String(buyurtma || 'Buyurtma'), sana: String(sana || ''),
 		jamiKg: kg1(upakovkalar.reduce(function (s, u) { return s + u.kg; }, 0)),
 		upakovkalar: upakovkalar
 	};
+	if (qosh && qosh.turkum) y.turkum = qosh.turkum;
+	if (qosh && qosh.model) y.model = qosh.model;
+	return y;
 }
 
-if (typeof module !== 'undefined') module.exports = { DEFAULT: UPAK_DEFAULT, sozlama, zichlik, detalKg, fasadmi, bolish, yukFayl, qisqart };
+if (typeof module !== 'undefined') module.exports = { DEFAULT: UPAK_DEFAULT, sozlama, zichlik, detalKg, fasadmi, guruhi, bolish, yukFayl, qisqart, turkumAniqla };
