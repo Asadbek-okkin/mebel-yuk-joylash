@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Yuk joylash</title>
+<meta name="description" content="Mebel upakovkalarini mashinaga joylash: nechta sig'adi, necha kg / tonna.">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<header class="bosh">
+  <h1>Yuk joylash</h1>
+  <span class="izoh">Mebel upakovkalari mashinada</span>
+</header>
+<main class="joy">
+  <aside class="panel">
+    <section class="blok">
+      <h2>Buyurtmalar</h2>
+      <div class="qator">
+        <label class="tugma asosiy">Fayl qo'shish (.yuk)
+          <input type="file" data-test="fayl" accept=".yuk,.json" multiple hidden>
+        </label>
+        <button class="tugma" data-test="namuna" type="button">Namuna</button>
+      </div>
+      <p class="xato" data-test="xato" hidden></p>
+      <ul class="buyurtmalar" data-test="buyurtmalar"></ul>
+      <p class="bosh-holat" data-test="bosh">Bazis "Upakovka" skripti yaratgan .yuk faylini qo'shing.</p>
+    </section>
+
+    <section class="blok">
+      <h2>Mashina</h2>
+      <div class="qator">
+        <select data-test="mashina" aria-label="Mashina"></select>
+        <button class="tugma" data-test="oz-ochish" type="button">+ O'z mashinam</button>
+      </div>
+      <p class="olcham" data-test="mashina-olcham"></p>
+      <button class="tugma kichik xavfli" data-test="oz-ochir" type="button" hidden>Bu mashinani o'chirish</button>
+      <form class="oz" data-test="oz-forma" hidden>
+        <label>Nomi <input name="nomi" required maxlength="30" placeholder="Kamaz"></label>
+        <div class="uchta">
+          <label>Uzunlik, mm <input name="L" type="number" required min="300" max="20000" inputmode="numeric"></label>
+          <label>Eni, mm <input name="W" type="number" required min="300" max="4000" inputmode="numeric"></label>
+          <label>Balandlik, mm <input name="H" type="number" required min="300" max="4000" inputmode="numeric"></label>
+        </div>
+        <label>Yuk ko'tarishi, kg <input name="maxKg" type="number" required min="50" max="60000" inputmode="numeric"></label>
+        <div class="qator">
+          <button class="tugma asosiy" type="submit">Saqlash</button>
+          <button class="tugma" data-test="oz-bekor" type="button">Bekor</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="blok natija" data-test="natija">
+      <h2>Natija</h2>
+      <div class="korsatkich">
+        <span class="yorliq">Sig'di</span>
+        <strong data-test="sigdi">—</strong>
+      </div>
+      <div class="korsatkich">
+        <span class="yorliq">Og'irlik</span>
+        <strong data-test="ogirlik">—</strong>
+      </div>
+      <div class="chiziq"><i data-test="ogirlik-chiziq"></i></div>
+      <div class="korsatkich">
+        <span class="yorliq">Hajm to'lishi</span>
+        <strong data-test="hajm">—</strong>
+      </div>
+      <div class="chiziq"><i data-test="hajm-chiziq"></i></div>
+      <p class="tavsiya" data-test="tavsiya"></p>
+      <ul class="sigmadi" data-test="sigmadi"></ul>
+      <button class="tugma" data-test="nechta" type="button">Nechta sig'adi?</button>
+      <p class="nechta" data-test="nechta-natija"></p>
+    </section>
+  </aside>
+
+  <section class="sahna-joy">
+    <div class="sahna" data-test="canvas"></div>
+    <p class="sahna-bosh" data-test="sahna-bosh">Fayl qo'shing yoki "Namuna" tugmasini bosing.</p>
+    <div class="qadamlar">
+      <button class="tugma kichik" data-test="orqaga" type="button" aria-label="Oldingi quti">◀</button>
+      <span data-test="qadam">Hammasi</span>
+      <button class="tugma kichik" data-test="oldinga" type="button" aria-label="Keyingi quti">▶</button>
+      <button class="tugma kichik" data-test="hammasi" type="button">Hammasi</button>
+    </div>
+    <div class="popup" data-test="popup" hidden></div>
+  </section>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>
